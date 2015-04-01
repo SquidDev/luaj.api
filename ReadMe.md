@@ -34,8 +34,11 @@ public class Thing {
 	@LuaFunction
 	@ValidationClass(StrictValidator.class)
 	public void strict(String key) {
-		// Strict validation will only accept Strings, it won't cast numbers to strings for instance
-		// This can be applied on the whole class, the method or on one argument
+		// Strict validation will only accept Strings, 
+		// it won't cast numbers to strings for instance
+		
+		// This can be applied on the whole class, 
+		// the method or on one argument
 	}
 }
 ```
