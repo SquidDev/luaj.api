@@ -1,0 +1,82 @@
+package org.squiddev.luaj.api;
+
+import org.luaj.vm2.LuaTable;
+import org.luaj.vm2.Varargs;
+import org.luaj.vm2.lib.VarArgFunction;
+
+/**
+ * A wrapper for using one `invoke` method for multiple lua methods
+ */
+public abstract class LuaObjectWrapper extends LuaObject {
+	/**
+	 * The instance that this class is bound to
+	 */
+	public final Object instance;
+
+	public LuaObjectWrapper(Object inst) {
+		instance = inst;
+	}
+
+	protected String[][] methodNames = null;
+	protected String[] names = null;
+
+	/**
+	 * Get the names of globals this API should be bound to.
+	 *
+	 * @return An array of name to bind to. Return null or an empty array to not set globals
+	 */
+	public String[] getNames() {
+		return names;
+	}
+
+	/**
+	 * Call a particular function with arguments
+	 *
+	 * @param args  The arguments to call the function with
+	 * @param index The index of the function
+	 * @return The return values of calling the function
+	 */
+	protected abstract Varargs invoke(Varargs args, int index);
+
+	/**
+	 * Create the API's function table
+	 *
+	 * @return The created table
+	 * @see #getTable()
+	 */
+	protected LuaTable createTable() {
+		LuaTable table = new LuaTable();
+		try {
+			for (int i = 0, n = methodNames.length; i < n; i++) {
+				// Allow multiple names
+				for (String name : methodNames[i]) {
+					// Each function should be a different object, even if it is identical.
+					table.set(name, new InvokeFunction(i));
+				}
+			}
+		} catch (Exception e) {
+			throw new RuntimeException("Bind failed", e);
+		}
+		return table;
+	}
+
+	/**
+	 * A basic wrapper function that calls the invoke method with the arguments
+	 * and the function's index
+	 */
+	protected class InvokeFunction extends VarArgFunction {
+		public final int index;
+
+		public InvokeFunction(int index) {
+			this.index = index;
+		}
+
+		/**
+		 * We override the invoke function (not onInvoke) to prevent changing the stack
+		 */
+		@Override
+		public Varargs invoke(Varargs varargs) {
+			return LuaObjectWrapper.this.invoke(varargs, index);
+		}
+	}
+}
