@@ -1,4 +1,4 @@
-# Java Busted [![Build Status](https://travis-ci.org/SquidDev/luaj.api.svg?branch=master)](https://travis-ci.org/SquidDev/luaj.api)
+# LuaJ APIs [![Build Status](https://travis-ci.org/SquidDev/luaj.api.svg?branch=master)](https://travis-ci.org/SquidDev/luaj.api)
 Nicer APIs for LuaJ
  
 ## Usage
