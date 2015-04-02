@@ -4,10 +4,18 @@ import org.luaj.vm2.LuaBoolean;
 import org.luaj.vm2.LuaDouble;
 import org.luaj.vm2.LuaInteger;
 import org.luaj.vm2.LuaValue;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Type;
+import org.squiddev.luaj.api.LuaAPI;
+import org.squiddev.luaj.api.LuaObject;
+import org.squiddev.luaj.api.builder.APIBuilder;
 import org.squiddev.luaj.api.utils.TinyMethod;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.objectweb.asm.Opcodes.*;
+import static org.squiddev.luaj.api.builder.APIBuilder.*;
 
 /**
  * A registry for managing conversions
@@ -18,12 +26,12 @@ public class Converter {
 	/**
 	 * Methods that convert Java objects to {@link org.luaj.vm2.LuaValue}
 	 */
-	public final Map<Class<?>, TinyMethod> toLua = new HashMap<>();
+	public final Map<Class<?>, IInjector> toLua = new HashMap<>();
 
 	/**
 	 * Methods that convert {@link org.luaj.vm2.LuaValue} to Java objects
 	 */
-	public final Map<Class<?>, TinyMethod> fromLua = new HashMap<>();
+	public final Map<Class<?>, IInjector> fromLua = new HashMap<>();
 
 	public Converter() {
 		initFromLua();
@@ -32,10 +40,11 @@ public class Converter {
 
 	/**
 	 * Initialise the toLua table
+	 *
 	 * @see #toLua
 	 */
 	protected void initToLua() {
-		Map<Class<?>, TinyMethod> toLua = this.toLua;
+		Map<Class<?>, IInjector> toLua = this.toLua;
 
 		// Boolean
 		toLua.put(boolean.class, new TinyMethod(LuaBoolean.class, "valueOf", boolean.class));
@@ -71,10 +80,11 @@ public class Converter {
 
 	/**
 	 * Initialise the fromLua table
+	 *
 	 * @see #fromLua
 	 */
 	protected void initFromLua() {
-		Map<Class<?>, TinyMethod> fromLua = this.fromLua;
+		Map<Class<?>, IInjector> fromLua = this.fromLua;
 
 		fromLua.put(boolean.class, new TinyMethod(LuaValue.class, "toboolean"));
 		fromLua.put(byte.class, new TinyMethod(LuaValue.class, "tobyte"));
@@ -98,5 +108,58 @@ public class Converter {
 			return instance = new Converter();
 		}
 		return current;
+	}
+
+	/**
+	 * Get a converter to convert from Java to Lua
+	 *
+	 * @param klass The class to convert
+	 * @return The converter to use
+	 * @see #toLua
+	 */
+	public IInjector getToLua(final Class<?> klass) {
+		if (klass.isAnnotationPresent(LuaAPI.class)) {
+			return new IInjector() {
+				@Override
+				public void inject(MethodVisitor mv, APIBuilder builder) {
+					mv.visitFieldInsn(GETSTATIC, builder.className, LOADER, CLASS_LOADER);
+					mv.visitInsn(SWAP);
+					API_MAKE_INSTANCE.inject(mv);
+					API_GET_TABLE.inject(mv);
+				}
+			};
+		}
+
+		if (LuaObject.class.isAssignableFrom(klass)) {
+			return API_GET_TABLE;
+		}
+
+		return toLua.get(klass);
+	}
+
+	/**
+	 * Get a converter to convert from Lua to Java
+	 *
+	 * @param klass The class to convert
+	 * @return The converter to use
+	 * @see #fromLua
+	 */
+	public IInjector getFromLua(final Class<?> klass) {
+		// Allows having just LuaValue or Object
+		// This allows for if you just want to package the annotations and nothing else when supplying an API
+		if (klass.equals(Object.class) || klass.isInstance(LuaValue.class)) {
+			return IInjector.VOID;
+		}
+
+		if (LuaValue.class.isAssignableFrom(klass)) {
+			return new IInjector() {
+				@Override
+				public void inject(MethodVisitor mv, APIBuilder builder) {
+					mv.visitTypeInsn(CHECKCAST, Type.getInternalName(klass));
+				}
+			};
+		}
+
+		return fromLua.get(klass);
 	}
 }

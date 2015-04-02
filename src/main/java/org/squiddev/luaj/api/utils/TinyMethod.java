@@ -2,6 +2,8 @@ package org.squiddev.luaj.api.utils;
 
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
+import org.squiddev.luaj.api.builder.APIBuilder;
+import org.squiddev.luaj.api.conversion.IInjector;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -12,7 +14,7 @@ import static org.objectweb.asm.Opcodes.INVOKEVIRTUAL;
 /**
  * Stores very basic data about a method so we can inject it
  */
-public class TinyMethod {
+public class TinyMethod implements IInjector {
 	public final String className;
 	public final String name;
 	public final String signature;
@@ -74,11 +76,12 @@ public class TinyMethod {
 		}
 	}
 
-	public void inject(MethodVisitor mv, int opcode) {
-		mv.visitMethodInsn(opcode, className, name, signature, false);
+	public void inject(MethodVisitor mv) {
+		mv.visitMethodInsn(isStatic ? INVOKESTATIC : INVOKEVIRTUAL, className, name, signature, false);
 	}
 
-	public void inject(MethodVisitor mv) {
-		inject(mv, isStatic ? INVOKESTATIC : INVOKEVIRTUAL);
+	@Override
+	public void inject(MethodVisitor mv, APIBuilder builder) {
+		inject(mv);
 	}
 }

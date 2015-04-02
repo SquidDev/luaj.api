@@ -5,7 +5,7 @@ import static org.junit.Assert.assertTrue;
 
 /**
  * A slightly nicer way of handling exceptions
- * <p>
+ *
  * I know {@see org.junit.rules.ExpectedException} exists, but it is not as flexible
  */
 public class ExpectException {

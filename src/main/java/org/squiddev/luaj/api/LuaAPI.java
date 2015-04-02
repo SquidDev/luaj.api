@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
 /**
  * Show that this function is a Lua API
  *
- * This doesn't need to be explicitly used but is a useful hint
+ * This doesn't need to be explicitly used on your class unless you plan on returning it from a {@link LuaFunction}
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)

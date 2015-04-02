@@ -9,18 +9,20 @@ import org.luaj.vm2.Varargs;
 import org.luaj.vm2.lib.jse.JsePlatform;
 import org.squiddev.luaj.api.builder.APIClassLoader;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.squiddev.luaj.api.LuaConversion.convert;
 
 /**
  * Tests functions are called correctly
  */
 public class ReturnValues {
+	private static APIClassLoader loader;
 	private static LuaTable table;
 
 	@BeforeClass
 	public static void testCreateAPI() throws Exception {
-		LuaObject api = APIClassLoader.createLoader().makeInstance(new EmbedClass());
+		loader = APIClassLoader.createLoader();
+		LuaObject api = loader.makeInstance(new EmbedClass());
 
 		// Set environment and bind to a variable
 		JsePlatform.debugGlobals();
@@ -90,6 +92,31 @@ public class ReturnValues {
 		assertEquals(-1, result.get(3).toint());
 	}
 
+
+	@Test
+	public void returnLuaAPI() {
+		LuaValue result = table.get("makeChild").invoke().arg1();
+
+		assertTrue(result.istable());
+		assertTrue(result.get("noArgsNoReturn").isfunction());
+
+		// They shouldn't be the same
+		assertNotEquals(result, table);
+		assertNotEquals(result.get("returnVarargs"), table.get("returnVarags"));
+	}
+
+	@Test
+	public void returnLuaObject() {
+		LuaValue result = table.get("makeInstance").invoke().arg1();
+
+		assertTrue(result.istable());
+		assertTrue(result.get("noArgsNoReturn").isfunction());
+
+		// They shouldn't be the same
+		assertNotEquals(result, table);
+		assertNotEquals(result.get("returnVarargs"), table.get("returnVarags"));
+	}
+
 	@LuaAPI
 	public static class EmbedClass {
 		@LuaFunction
@@ -133,6 +160,16 @@ public class ReturnValues {
 				LuaNumber.ZERO,
 				LuaNumber.MINUSONE,
 			};
+		}
+
+		@LuaFunction
+		public EmbedClass makeChild() {
+			return new EmbedClass();
+		}
+
+		@LuaFunction
+		public LuaObject makeInstance() {
+			return loader.makeInstance(new EmbedClass());
 		}
 	}
 }

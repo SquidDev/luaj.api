@@ -1,11 +1,14 @@
 package org.squiddev.luaj.api.builder;
 
+import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.Varargs;
 import org.objectweb.asm.*;
 import org.squiddev.luaj.api.LuaAPI;
 import org.squiddev.luaj.api.LuaFunction;
+import org.squiddev.luaj.api.LuaObject;
 import org.squiddev.luaj.api.conversion.Converter;
+import org.squiddev.luaj.api.conversion.IInjector;
 import org.squiddev.luaj.api.utils.TinyMethod;
 import org.squiddev.luaj.api.validation.ILuaValidator;
 
@@ -18,12 +21,35 @@ import static org.squiddev.luaj.api.utils.AsmUtils.constantOpcode;
 
 /**
  * Builds ASM code to call an API
- * TODO: More constants, less strings
  */
 public class APIBuilder {
-	public static final String VARARGS = Type.getDescriptor(Varargs.class);
-	public static final String INVOKE_SIGNATURE = "(" + VARARGS + "I)" + VARARGS;
+	// A CLASS_ Starts is the L...; fVrmat, a TYPE_ is not
+	public static final String CLASS_VARARGS = Type.getDescriptor(Varargs.class);
+	public static final String CLASS_LUAVALUE = Type.getDescriptor(LuaValue.class);
+	public static final String TYPE_LUAVALUE = Type.getInternalName(LuaValue.class);
+	public static final String TYPE_LUAERROR = Type.getInternalName(LuaError.class);
 
+	public static final String CLASS_LOADER = Type.getDescriptor(APIClassLoader.class);
+	public static final String TYPE_LOADER = Type.getInternalName(APIClassLoader.class);
+
+	public static final String INVOKE_SIGNATURE = "(" + CLASS_VARARGS + "I)" + CLASS_VARARGS;
+
+	public static final String LOADER = "LOADER";
+
+	public static final String NAMES = "NAMES";
+	public static final String NAMES_SIGNATURE = "[Ljava/lang/String;";
+
+	public static final String METHOD_NAMES = "METHOD_NAMES";
+	public static final String METHOD_NAMES_SIGNATURE = "[[Ljava/lang/String;";
+
+	public static final TinyMethod VARARGS_NARGS = new TinyMethod(Varargs.class, "narg");
+	public static final TinyMethod VARARGS_ARG = new TinyMethod(Varargs.class, "arg", int.class);
+	public static final TinyMethod VARARGS_SUBARGS = new TinyMethod(Varargs.class, "subargs", int.class);
+	public static final TinyMethod VARARGS_OF = new TinyMethod(LuaValue.class, "varargsOf", LuaValue[].class);
+	public static final TinyMethod LIST_OF = new TinyMethod(LuaValue.class, "listOf", LuaValue[].class);
+
+	public static final TinyMethod API_MAKE_INSTANCE = new TinyMethod(APIClassLoader.class, "makeInstance", Object.class);
+	public static final TinyMethod API_GET_TABLE = new TinyMethod(LuaObject.class, "getTable");
 	/**
 	 * The class we build the wrapper for
 	 */
@@ -39,31 +65,31 @@ public class APIBuilder {
 	 *
 	 * @see #klass
 	 */
-	protected final String originalName;
+	public final String originalName;
 
 	/**
 	 * The whole name of the original name ('L' + ... + ';')
 	 */
-	protected final String originalWhole;
+	public final String originalWhole;
 
 	/**
 	 * The name of the generated class
 	 */
-	protected final String className;
+	public final String className;
 
 	/**
 	 * The name of the parent/super class for our generated wrapper
 	 *
 	 * @see APIClassLoader#parentClass
 	 */
-	protected final Class<?> parent;
+	public final Class<?> parent;
 
 	/**
 	 * Stores the conversion
 	 *
 	 * @see APIClassLoader#converter
 	 */
-	protected final Converter converter;
+	public final Converter converter;
 
 	/**
 	 * Globals that this should be set to
@@ -86,8 +112,8 @@ public class APIBuilder {
 		this.klass = klass;
 
 		originalName = Type.getInternalName(klass);
-		className = name.replace('.', '/');
 		originalWhole = Type.getDescriptor(klass);
+		className = name.replace('.', '/');
 
 		writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
 		parent = loader.parentClass;
@@ -104,10 +130,13 @@ public class APIBuilder {
 		writer.visit(V1_6, ACC_PUBLIC + ACC_SUPER, className, null, Type.getInternalName(parent), null);
 
 		// Declare METHOD_NAMES
-		writer.visitField(ACC_PRIVATE | ACC_FINAL | ACC_STATIC, "METHOD_NAMES", "[[Ljava/lang/String;", null, null);
+		writer.visitField(ACC_PRIVATE | ACC_FINAL | ACC_STATIC, METHOD_NAMES, METHOD_NAMES_SIGNATURE, null, null).visitEnd();
 
 		// Declare NAMES
-		writer.visitField(ACC_PRIVATE | ACC_FINAL | ACC_STATIC, "NAMES", "[Ljava/lang/String;", null, null);
+		writer.visitField(ACC_PRIVATE | ACC_FINAL | ACC_STATIC, NAMES, NAMES_SIGNATURE, null, null).visitEnd();
+
+		// LOADER is setup in the class loader. This allows us to load other classes
+		writer.visitField(ACC_PRIVATE | ACC_FINAL | ACC_STATIC, LOADER, CLASS_LOADER, null, null).visitEnd();
 
 		// Read all methods
 		List<LuaMethod> methods = this.methods = new ArrayList<>();
@@ -174,7 +203,7 @@ public class APIBuilder {
 			++counter;
 		}
 
-		mv.visitFieldInsn(PUTSTATIC, className, "METHOD_NAMES", "[[Ljava/lang/String;");
+		mv.visitFieldInsn(PUTSTATIC, className, METHOD_NAMES, METHOD_NAMES_SIGNATURE);
 
 		// Visit names
 		if (names == null) {
@@ -194,7 +223,13 @@ public class APIBuilder {
 			}
 		}
 
-		mv.visitFieldInsn(PUTSTATIC, className, "NAMES", "[Ljava/lang/String;");
+		mv.visitFieldInsn(PUTSTATIC, className, NAMES, NAMES_SIGNATURE);
+
+		// Setup the class loader
+		mv.visitLdcInsn(Type.getType("L" + className + ";"));
+		mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Class", "getClassLoader", "()Ljava/lang/ClassLoader;", false);
+		mv.visitTypeInsn(CHECKCAST, TYPE_LOADER);
+		mv.visitFieldInsn(PUTSTATIC, className, LOADER, CLASS_LOADER);
 
 		mv.visitInsn(RETURN);
 
@@ -217,13 +252,13 @@ public class APIBuilder {
 
 		// Set method names
 		mv.visitVarInsn(ALOAD, 0);
-		mv.visitFieldInsn(GETSTATIC, className, "METHOD_NAMES", "[[Ljava/lang/String;");
-		mv.visitFieldInsn(PUTFIELD, className, "methodNames", "[[Ljava/lang/String;");
+		mv.visitFieldInsn(GETSTATIC, className, METHOD_NAMES, METHOD_NAMES_SIGNATURE);
+		mv.visitFieldInsn(PUTFIELD, className, "methodNames", METHOD_NAMES_SIGNATURE);
 
 		// Set method API names
 		mv.visitVarInsn(ALOAD, 0);
-		mv.visitFieldInsn(GETSTATIC, className, "NAMES", "[Ljava/lang/String;");
-		mv.visitFieldInsn(PUTFIELD, className, "names", "[Ljava/lang/String;");
+		mv.visitFieldInsn(GETSTATIC, className, NAMES, NAMES_SIGNATURE);
+		mv.visitFieldInsn(PUTFIELD, className, "names", NAMES_SIGNATURE);
 
 		// And return
 		mv.visitInsn(RETURN);
@@ -265,7 +300,7 @@ public class APIBuilder {
 
 			if (needsValidation) {
 				mv.visitVarInsn(ALOAD, 1);
-				mv.visitMethodInsn(INVOKEVIRTUAL, "org/luaj/vm2/Varargs", "narg", "()I", false);
+				VARARGS_NARGS.inject(mv);
 				constantOpcode(mv, iterator.length());
 				mv.visitJumpInsn(IF_ICMPLT, doException);
 			}
@@ -282,7 +317,7 @@ public class APIBuilder {
 				if (validator.shouldValidate(type)) {
 					mv.visitVarInsn(ALOAD, 1);
 					constantOpcode(mv, index);
-					mv.visitMethodInsn(INVOKEVIRTUAL, "org/luaj/vm2/Varargs", "arg", "(I)Lorg/luaj/vm2/LuaValue;", false);
+					VARARGS_ARG.inject(mv);
 					validator.addValidation(mv, type);
 
 					if (iterator.hasValidateNext()) {
@@ -301,7 +336,7 @@ public class APIBuilder {
 				// Do exception
 				mv.visitLabel(doException);
 				mv.visitFrame(F_SAME, 0, null, 0, null);
-				mv.visitTypeInsn(NEW, "org/luaj/vm2/LuaError");
+				mv.visitTypeInsn(NEW, TYPE_LUAERROR);
 				mv.visitInsn(DUP);
 
 				String error = method.getError();
@@ -311,7 +346,7 @@ public class APIBuilder {
 					error = text;
 				}
 				mv.visitLdcInsn(error);
-				mv.visitMethodInsn(INVOKESPECIAL, "org/luaj/vm2/LuaError", "<init>", "(Ljava/lang/String;)V", false);
+				mv.visitMethodInsn(INVOKESPECIAL, TYPE_LUAERROR, "<init>", "(Ljava/lang/String;)V", false);
 				mv.visitInsn(ATHROW);
 
 				// Continue
@@ -333,29 +368,20 @@ public class APIBuilder {
 				Class<?> argType = arg.type;
 				if (argType.equals(Varargs.class)) {
 					// If we just have varargs then we should load it, if we have varargs later then use subargs
-					if (iterator.length() > 1) {
+					if (argCounter > 1) {
 						constantOpcode(mv, argCounter);
-						mv.visitMethodInsn(INVOKEVIRTUAL, "org/luaj/vm2/Varargs", "subargs", "(I)Lorg/luaj/vm2/Varargs;", false);
+						VARARGS_SUBARGS.inject(mv);
 					}
 				} else {
 					constantOpcode(mv, argCounter);
-					mv.visitMethodInsn(INVOKEVIRTUAL, "org/luaj/vm2/Varargs", "arg", "(I)Lorg/luaj/vm2/LuaValue;", false);
+					VARARGS_ARG.inject(mv);
 
-					// Allows having just LuaValue or Object
-					// This allows for if you just want to package the annotations and nothing else when supplying an API
-					if (!argType.equals(Object.class) && !argType.isInstance(LuaValue.class)) {
-						if (LuaValue.class.isAssignableFrom(argType)) {
-							// Cast to the type required
-							mv.visitTypeInsn(CHECKCAST, Type.getInternalName(argType));
-						} else {
-							TinyMethod type = converter.fromLua.get(argType);
-							if (type == null) {
-								throw new BuilderException("Cannot convert LuaValue to " + argType, method);
-							}
-
-							type.inject(mv, INVOKEVIRTUAL);
-						}
+					IInjector type = converter.getFromLua(argType);
+					if (type == null) {
+						throw new BuilderException("Cannot convert LuaValue to " + argType, method);
 					}
+
+					type.inject(mv, this);
 				}
 
 				++argCounter;
@@ -367,24 +393,24 @@ public class APIBuilder {
 			Class<?> returns = method.method.getReturnType();
 			if (returns.equals(Void.TYPE)) {
 				// If no result, return None
-				mv.visitFieldInsn(GETSTATIC, "org/luaj/vm2/LuaValue", "NONE", "Lorg/luaj/vm2/LuaValue;");
+				mv.visitFieldInsn(GETSTATIC, TYPE_LUAVALUE, "NONE", CLASS_LUAVALUE);
 			} else if (!Varargs.class.isAssignableFrom(returns)) { // Don't need to convert if returning a LuaValue
 				if (!returns.isArray() || !LuaValue.class.isAssignableFrom(returns.getComponentType())) {
 					// Check if we have a converter
-					TinyMethod type = converter.toLua.get(returns);
+					IInjector type = converter.getToLua(returns);
 					if (type == null) {
 						throw new BuilderException("Cannot convert " + returns.getName() + " to LuaValue for ", method);
 					}
 
-					type.inject(mv, INVOKESTATIC);
+					type.inject(mv, this);
 				}
 
 				// If we return an array then try return a {@link LuaTable} or {@link Varargs}
 				if (returns.isArray()) {
 					if (method.function.isVarArgs()) {
-						mv.visitMethodInsn(INVOKESTATIC, "org/luaj/vm2/LuaValue", "varargsOf", "([Lorg/luaj/vm2/LuaValue;)Lorg/luaj/vm2/Varargs;", false);
+						VARARGS_OF.inject(mv);
 					} else {
-						mv.visitMethodInsn(INVOKESTATIC, "org/luaj/vm2/LuaValue", "listOf", "([Lorg/luaj/vm2/LuaValue;)Lorg/luaj/vm2/LuaTable;", false);
+						LIST_OF.inject(mv);
 					}
 				}
 			}
@@ -397,7 +423,7 @@ public class APIBuilder {
 		mv.visitLabel(defaultLabel);
 		mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
 		// return LuaValue.NONE;
-		mv.visitFieldInsn(GETSTATIC, "org/luaj/vm2/LuaValue", "NONE", "Lorg/luaj/vm2/LuaValue;");
+		mv.visitFieldInsn(GETSTATIC, TYPE_LUAVALUE, "NONE", CLASS_LUAVALUE);
 		mv.visitInsn(ARETURN);
 
 		mv.visitMaxs(0, 0);
