@@ -1,6 +1,7 @@
 package org.squiddev.luaj.api;
 
 import org.luaj.vm2.LuaTable;
+import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.Varargs;
 import org.luaj.vm2.lib.VarArgFunction;
 
@@ -46,18 +47,43 @@ public abstract class LuaObjectWrapper extends LuaObject {
 	 */
 	protected LuaTable createTable() {
 		LuaTable table = new LuaTable();
+		LuaTable meta = null;
 		try {
 			for (int i = 0, n = methodNames.length; i < n; i++) {
 				// Allow multiple names
 				for (String name : methodNames[i]) {
 					// Each function should be a different object, even if it is identical.
-					table.set(name, new InvokeFunction(i));
+					LuaValue function = createFunction(i);
+
+					// Add support for metamethods
+					if (name.startsWith("__")) {
+						if (meta == null) {
+							meta = new LuaTable();
+							table.setmetatable(meta);
+						}
+
+						meta.set(name, function);
+					} else {
+						table.set(name, function);
+					}
+
 				}
 			}
 		} catch (Exception e) {
 			throw new RuntimeException("Bind failed", e);
 		}
 		return table;
+	}
+
+	/**
+	 * Create a function with the specified index.
+	 * Override to use custom functions
+	 *
+	 * @param index The function's index
+	 * @return The created function
+	 */
+	protected LuaValue createFunction(int index) {
+		return new InvokeFunction(index);
 	}
 
 	/**
