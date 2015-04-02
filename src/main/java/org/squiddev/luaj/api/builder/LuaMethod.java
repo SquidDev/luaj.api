@@ -1,17 +1,15 @@
 package org.squiddev.luaj.api.builder;
 
 import org.luaj.vm2.Varargs;
+import org.squiddev.luaj.api.LuaFunction;
 import org.squiddev.luaj.api.validation.DefaultLuaValidator;
 import org.squiddev.luaj.api.validation.ILuaValidator;
-import org.squiddev.luaj.api.LuaFunction;
 import org.squiddev.luaj.api.validation.ValidationClass;
 
 import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-
 
 /**
  * Stores all data associated with a Lua function
@@ -32,11 +30,11 @@ public class LuaMethod implements Iterable<LuaMethod.LuaArgument> {
 
 
 		boolean varargs = false;
-		Parameter[] params = m.getParameters();
+		Parameter[] params = Parameter.getParameters(m);
 		LuaArgument[] arguments = this.arguments = new LuaArgument[params.length];
 		for (int i = 0; i < params.length; i++) {
 			Parameter param = params[i];
-			if(param.getType().equals(Varargs.class)) {
+			if (param.getType().equals(Varargs.class)) {
 				varargs = true;
 				if (i + 1 < params.length) {
 					throw new APIBuilder.BuilderException("Varargs must be last item", m);
@@ -173,6 +171,11 @@ public class LuaMethod implements Iterable<LuaMethod.LuaArgument> {
 		@Override
 		public LuaArgument next() {
 			return items[index++];
+		}
+
+		@Override
+		public void remove() {
+			throw new UnsupportedOperationException();
 		}
 
 		public int length() {

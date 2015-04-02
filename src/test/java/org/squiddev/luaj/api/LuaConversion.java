@@ -35,4 +35,13 @@ public class LuaConversion {
 
 		throw new RuntimeException("Cannot cast " + object.getClass());
 	}
+
+	public static Runnable runMethod(final LuaValue method, final Object... arguments) {
+		return new Runnable() {
+			@Override
+			public void run() {
+				method.invoke(convert(arguments));
+			}
+		};
+	}
 }

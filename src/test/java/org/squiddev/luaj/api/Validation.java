@@ -11,6 +11,8 @@ import org.squiddev.luaj.api.validation.DefaultLuaValidator;
 import org.squiddev.luaj.api.validation.StrictValidator;
 import org.squiddev.luaj.api.validation.ValidationClass;
 
+import static org.squiddev.luaj.api.LuaConversion.runMethod;
+
 /**
  * Tests validation occurs properly
  */
@@ -33,10 +35,10 @@ public class Validation {
 	public void defaultValidation() {
 		final LuaValue defaultMode = table.get("defaultMode");
 		ExpectException.expect(LuaError.class, "Expected number, number",
-			() -> defaultMode.invoke(LuaValue.valueOf(true), LuaValue.valueOf(1)),
-			() -> defaultMode.invoke(LuaValue.valueOf("HELLO"), LuaValue.valueOf(1)),
-			() -> defaultMode.invoke(LuaValue.valueOf(1), LuaValue.valueOf(1.12)),
-			() -> defaultMode.invoke(LuaValue.valueOf(1))
+			runMethod(defaultMode, true, 1),
+			runMethod(defaultMode, "HELLO", 1),
+			runMethod(defaultMode, 1, 1.12),
+			runMethod(defaultMode, 1)
 		);
 	}
 
@@ -46,7 +48,7 @@ public class Validation {
 	@Test
 	public void customErrors() {
 		ExpectException.expect(LuaError.class, "I expected better of you!",
-			() -> table.get("testingError").invoke(LuaValue.valueOf(true), LuaValue.valueOf(1))
+			runMethod(table.get("testingError"), true, 1)
 		);
 	}
 
@@ -62,9 +64,9 @@ public class Validation {
 		strictMode.invoke(normalNumber, normalNumber);
 
 		ExpectException.expect(LuaError.class, "Expected number, number",
-			() -> strictMode.invoke(stringNumber, stringNumber),
-			() -> strictMode.invoke(stringNumber, normalNumber),
-			() -> strictMode.invoke(normalNumber, stringNumber)
+			runMethod(strictMode, stringNumber, stringNumber),
+			runMethod(strictMode, stringNumber, normalNumber),
+			runMethod(strictMode, normalNumber, stringNumber)
 		);
 	}
 
@@ -73,16 +75,16 @@ public class Validation {
 	 */
 	@Test
 	public void testHybridMode() {
-		LuaValue strictMode = table.get("hybridMode");
+		LuaValue hybridMode = table.get("hybridMode");
 		LuaValue stringNumber = LuaValue.valueOf("2");
 		LuaValue normalNumber = LuaValue.valueOf(2);
 
-		strictMode.invoke(normalNumber, normalNumber);
-		strictMode.invoke(normalNumber, stringNumber);
+		hybridMode.invoke(normalNumber, normalNumber);
+		hybridMode.invoke(normalNumber, stringNumber);
 
 		ExpectException.expect(LuaError.class, "Expected number, number",
-			() -> strictMode.invoke(stringNumber, stringNumber),
-			() -> strictMode.invoke(stringNumber, normalNumber)
+			runMethod(hybridMode, stringNumber, stringNumber),
+			runMethod(hybridMode, stringNumber, normalNumber)
 		);
 	}
 
