@@ -117,6 +117,12 @@ public class ReturnValues {
 		assertNotEquals(result.get("returnVarargs"), table.get("returnVarags"));
 	}
 
+	@Test
+	public void returnSelf() {
+		// Return this should result in the current table
+		assertEquals(table, table.get("getSelf").invoke().arg1());
+	}
+
 	@LuaAPI
 	public static class EmbedClass {
 		@LuaFunction
@@ -170,6 +176,11 @@ public class ReturnValues {
 		@LuaFunction
 		public LuaObject makeInstance() {
 			return loader.makeInstance(new EmbedClass());
+		}
+
+		@LuaFunction
+		public EmbedClass getSelf() {
+			return this;
 		}
 	}
 }
