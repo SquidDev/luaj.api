@@ -21,7 +21,7 @@ public class Validation {
 
 	@BeforeClass
 	public static void testCreateAPI() throws Exception {
-		LuaObject api = new APIClassLoader().makeInstance(new EmbedClass());
+		LuaObject api = APIClassLoader.createLoader().makeInstance(new EmbedClass());
 
 		// Set environment and bind to a variable
 		JsePlatform.debugGlobals();

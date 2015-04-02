@@ -62,9 +62,9 @@ public abstract class LuaObjectWrapper extends LuaObject {
 							table.setmetatable(meta);
 						}
 
-						meta.set(name, function);
+						meta.rawset(name, function);
 					} else {
-						table.set(name, function);
+						table.rawset(name, function);
 					}
 
 				}

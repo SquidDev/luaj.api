@@ -114,7 +114,7 @@ public class LuaMethod implements Iterable<LuaMethod.LuaArgument> {
 				try {
 					val = validatorType.newInstance();
 				} catch (ReflectiveOperationException e) {
-					throw new RuntimeException("Cannot create new instance of " + validatorType.getName(), e);
+					throw new APIBuilder.BuilderException("Cannot create new instance of " + validatorType.getName(), e);
 				}
 
 				VALIDATORS.put(validatorType, val);

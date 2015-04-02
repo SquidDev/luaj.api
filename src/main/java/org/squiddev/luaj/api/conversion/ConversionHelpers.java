@@ -1,11 +1,11 @@
-package org.squiddev.luaj.api;
+package org.squiddev.luaj.api.conversion;
 
 import org.luaj.vm2.*;
 
 /**
  * Helper conversions
  */
-public class Conversion {
+public class ConversionHelpers {
 	/**
 	 * Convert a string to a LuaValue. Supports nulls
 	 *

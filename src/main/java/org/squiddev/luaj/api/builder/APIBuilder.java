@@ -1,18 +1,17 @@
 package org.squiddev.luaj.api.builder;
 
-import org.luaj.vm2.*;
+import org.luaj.vm2.LuaValue;
+import org.luaj.vm2.Varargs;
 import org.objectweb.asm.*;
-import org.squiddev.luaj.api.Conversion;
 import org.squiddev.luaj.api.LuaAPI;
 import org.squiddev.luaj.api.LuaFunction;
+import org.squiddev.luaj.api.conversion.Converter;
 import org.squiddev.luaj.api.utils.TinyMethod;
 import org.squiddev.luaj.api.validation.ILuaValidator;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static org.objectweb.asm.Opcodes.*;
 import static org.squiddev.luaj.api.utils.AsmUtils.constantOpcode;
@@ -26,71 +25,21 @@ public class APIBuilder {
 	public static final String INVOKE_SIGNATURE = "(" + VARARGS + "I)" + VARARGS;
 
 	/**
-	 * Map Java classes to converters
+	 * The class we build the wrapper for
 	 */
-	public static final Map<Class<?>, TinyMethod> TO_LUA;
+	protected final Class<?> klass;
 
 	/**
-	 * Map Lua classes to converters
+	 * The {@link ClassWriter} for the wrapper class
 	 */
-	public static final Map<Class<?>, TinyMethod> FROM_LUA;
-
-	static {
-		Map<Class<?>, TinyMethod> toLua = new HashMap<>();
-		TO_LUA = toLua;
-
-		// Boolean
-		toLua.put(boolean.class, new TinyMethod(LuaBoolean.class, "valueOf", boolean.class));
-		toLua.put(boolean[].class, new TinyMethod(Conversion.class, "valueOf", boolean[].class));
-
-		// Integers
-		toLua.put(int.class, new TinyMethod(LuaInteger.class, "valueOf", int.class));
-		toLua.put(int[].class, new TinyMethod(Conversion.class, "valueOf", int[].class));
-
-		toLua.put(byte.class, new TinyMethod(LuaInteger.class, "valueOf", int.class));
-		toLua.put(byte[].class, new TinyMethod(Conversion.class, "valueOf", byte[].class));
-
-		toLua.put(short.class, new TinyMethod(LuaInteger.class, "valueOf", int.class));
-		toLua.put(short[].class, new TinyMethod(Conversion.class, "valueOf", short[].class));
-
-		toLua.put(char.class, new TinyMethod(LuaInteger.class, "valueOf", int.class));
-		toLua.put(char[].class, new TinyMethod(Conversion.class, "valueOf", char[].class));
-
-		toLua.put(long.class, new TinyMethod(LuaInteger.class, "valueOf", long.class));
-		toLua.put(long[].class, new TinyMethod(Conversion.class, "valueOf", long[].class));
-
-		// Floats
-		toLua.put(double.class, new TinyMethod(LuaDouble.class, "valueOf", double.class));
-		toLua.put(double[].class, new TinyMethod(Conversion.class, "valueOf", double[].class));
-
-		toLua.put(float.class, new TinyMethod(LuaDouble.class, "valueOf", double.class));
-		toLua.put(float[].class, new TinyMethod(Conversion.class, "valueOf", float[].class));
-
-		// String
-		toLua.put(String.class, new TinyMethod(Conversion.class, "valueOf", String.class));
-		toLua.put(String[].class, new TinyMethod(Conversion.class, "valueOf", String[].class));
-
-		Map<Class<?>, TinyMethod> fromLua = new HashMap<>();
-		FROM_LUA = fromLua;
-
-		fromLua.put(boolean.class, new TinyMethod(LuaValue.class, "toboolean"));
-		fromLua.put(byte.class, new TinyMethod(LuaValue.class, "tobyte"));
-		fromLua.put(char.class, new TinyMethod(LuaValue.class, "tochar"));
-		fromLua.put(double.class, new TinyMethod(LuaValue.class, "todouble"));
-		fromLua.put(float.class, new TinyMethod(LuaValue.class, "tofloat"));
-		fromLua.put(int.class, new TinyMethod(LuaValue.class, "toint"));
-		fromLua.put(long.class, new TinyMethod(LuaValue.class, "tolong"));
-		fromLua.put(short.class, new TinyMethod(LuaValue.class, "toshort"));
-		fromLua.put(String.class, new TinyMethod(LuaValue.class, "tojstring"));
-	}
-
-	protected final Class<?> reflection;
 	protected final ClassWriter writer;
 
+	/**
+	 * The name of the original class
+	 *
+	 * @see #klass
+	 */
 	protected final String originalName;
-	protected final String className;
-
-	protected final Class<?> parent;
 
 	/**
 	 * The whole name of the original name ('L' + ... + ';')
@@ -98,7 +47,26 @@ public class APIBuilder {
 	protected final String originalWhole;
 
 	/**
-	 * Names that this should be set to
+	 * The name of the generated class
+	 */
+	protected final String className;
+
+	/**
+	 * The name of the parent/super class for our generated wrapper
+	 *
+	 * @see APIClassLoader#parentClass
+	 */
+	protected final Class<?> parent;
+
+	/**
+	 * Stores the conversion
+	 *
+	 * @see APIClassLoader#converter
+	 */
+	protected final Converter converter;
+
+	/**
+	 * Globals that this should be set to
 	 */
 	protected String[] names = null;
 
@@ -107,15 +75,23 @@ public class APIBuilder {
 	 */
 	protected List<LuaMethod> methods;
 
-	public APIBuilder(Class<?> reflection, APIClassLoader loader) {
-		this.reflection = reflection;
+	/**
+	 * Create a new {@link APIBuilder}
+	 *
+	 * @param name   The name of the generated class
+	 * @param klass  The class we build a wrapper around
+	 * @param loader The class loader to load from. This stores settings about various generation options
+	 */
+	public APIBuilder(String name, Class<?> klass, APIClassLoader loader) {
+		this.klass = klass;
 
-		originalName = Type.getInternalName(reflection);
-		className = originalName + loader.suffix;
-		originalWhole = Type.getDescriptor(reflection);
+		originalName = Type.getInternalName(klass);
+		className = name.replace('.', '/');
+		originalWhole = Type.getDescriptor(klass);
 
 		writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
 		parent = loader.parentClass;
+		converter = loader.getConverter();
 
 		write();
 	}
@@ -123,7 +99,7 @@ public class APIBuilder {
 	/**
 	 * Write everything!
 	 */
-	void write() {
+	protected void write() {
 		// Declare class name
 		writer.visit(V1_6, ACC_PUBLIC + ACC_SUPER, className, null, Type.getInternalName(parent), null);
 
@@ -134,22 +110,21 @@ public class APIBuilder {
 		writer.visitField(ACC_PRIVATE | ACC_FINAL | ACC_STATIC, "NAMES", "[Ljava/lang/String;", null, null);
 
 		// Read all methods
-		methods = new ArrayList<>();
-		for (Method m : reflection.getMethods()) {
+		List<LuaMethod> methods = this.methods = new ArrayList<>();
+		for (Method m : klass.getMethods()) {
 			if (m.isAnnotationPresent(LuaFunction.class)) {
 				// Append items to the list
 				methods.add(new LuaMethod(m));
 			}
 		}
 
-		if (methods.size() == 0) throw new BuilderException("No LuaFunction methods", reflection);
+		if (methods.size() == 0) throw new BuilderException("No LuaFunction methods", klass);
 
-		if (reflection.isAnnotationPresent(LuaAPI.class)) {
-			names = reflection.getAnnotation(LuaAPI.class).value();
-			// If we have the LuaAPI annotation then
-			// we should ensure that this is set as an API
+		if (klass.isAnnotationPresent(LuaAPI.class)) {
+			names = klass.getAnnotation(LuaAPI.class).value();
+			// If we have the LuaAPI annotation then we should ensure that this is set as an API
 			if (names == null || names.length == 0) {
-				names = new String[]{reflection.getSimpleName().toLowerCase()};
+				names = new String[]{klass.getSimpleName().toLowerCase()};
 			}
 		}
 
@@ -164,7 +139,7 @@ public class APIBuilder {
 	 * Write the static constructor
 	 * This constructs the array of array of names.
 	 */
-	void writeStaticInit() {
+	protected void writeStaticInit() {
 		MethodVisitor mv = writer.visitMethod(ACC_STATIC, "<clinit>", "()V", null, null);
 		mv.visitCode();
 
@@ -231,7 +206,7 @@ public class APIBuilder {
 	 * Write the constructor. This calls the parent constructor,
 	 * sets the instance and sets the method names to be the static field
 	 */
-	void writeInit() {
+	protected void writeInit() {
 		MethodVisitor mv = writer.visitMethod(ACC_PUBLIC, "<init>", "(" + originalWhole + ")V", null, null);
 		mv.visitCode();
 
@@ -256,7 +231,7 @@ public class APIBuilder {
 		mv.visitEnd();
 	}
 
-	void writeInvoke() {
+	protected void writeInvoke() {
 		MethodVisitor mv = writer.visitMethod(ACC_PUBLIC, "invoke", INVOKE_SIGNATURE, null, null);
 		mv.visitCode();
 
@@ -301,8 +276,7 @@ public class APIBuilder {
 				Class<?> type = arg.type;
 				ILuaValidator validator = arg.getValidator();
 
-				// If the item is a varargs then we shouldn't give it a name
-				// Varargs will always be the last item
+				// If the item is a varargs then we shouldn't give it a name. Varargs will always be the last item
 				if (!type.equals(Varargs.class)) builder.append(validator.getName(type)).append(", ");
 
 				if (validator.shouldValidate(type)) {
@@ -344,6 +318,7 @@ public class APIBuilder {
 				mv.visitLabel(noException);
 				mv.visitFrame(F_SAME, 0, null, 0, null);
 			}
+
 			// Check the object is correct
 			mv.visitVarInsn(ALOAD, 0);
 			mv.visitFieldInsn(GETFIELD, className, "instance", "Ljava/lang/Object;");
@@ -366,16 +341,20 @@ public class APIBuilder {
 					constantOpcode(mv, argCounter);
 					mv.visitMethodInsn(INVOKEVIRTUAL, "org/luaj/vm2/Varargs", "arg", "(I)Lorg/luaj/vm2/LuaValue;", false);
 
-					if (LuaValue.class.isAssignableFrom(argType)) {
-						// Cast to the type required
-						mv.visitTypeInsn(CHECKCAST, Type.getInternalName(argType));
-					} else {
-						TinyMethod type = FROM_LUA.get(argType);
-						if (type == null) {
-							throw new BuilderException("Cannot convert LuaValue to " + argType, method);
-						}
+					// Allows having just LuaValue or Object
+					// This allows for if you just want to package the annotations and nothing else when supplying an API
+					if (!argType.equals(Object.class) && !argType.isInstance(LuaValue.class)) {
+						if (LuaValue.class.isAssignableFrom(argType)) {
+							// Cast to the type required
+							mv.visitTypeInsn(CHECKCAST, Type.getInternalName(argType));
+						} else {
+							TinyMethod type = converter.fromLua.get(argType);
+							if (type == null) {
+								throw new BuilderException("Cannot convert LuaValue to " + argType, method);
+							}
 
-						type.inject(mv, INVOKEVIRTUAL);
+							type.inject(mv, INVOKEVIRTUAL);
+						}
 					}
 				}
 
@@ -390,10 +369,9 @@ public class APIBuilder {
 				// If no result, return None
 				mv.visitFieldInsn(GETSTATIC, "org/luaj/vm2/LuaValue", "NONE", "Lorg/luaj/vm2/LuaValue;");
 			} else if (!Varargs.class.isAssignableFrom(returns)) { // Don't need to convert if returning a LuaValue
-
 				if (!returns.isArray() || !LuaValue.class.isAssignableFrom(returns.getComponentType())) {
 					// Check if we have a converter
-					TinyMethod type = TO_LUA.get(returns);
+					TinyMethod type = converter.toLua.get(returns);
 					if (type == null) {
 						throw new BuilderException("Cannot convert " + returns.getName() + " to LuaValue for ", method);
 					}
@@ -430,21 +408,40 @@ public class APIBuilder {
 		return writer.toByteArray();
 	}
 
+	/**
+	 * Exception thrown on generating classes
+	 */
 	public static class BuilderException extends RuntimeException {
+		public BuilderException(String message, Throwable cause) {
+			super(message, cause);
+		}
+
 		public BuilderException(String message) {
-			super(message);
+			super(message, null);
+		}
+
+		public BuilderException(String message, Class javaClass, Throwable cause) {
+			this(javaClass.getName() + ": " + message, cause);
 		}
 
 		public BuilderException(String message, Class javaClass) {
-			this(javaClass.getName() + ": " + message);
+			this(message, javaClass, null);
+		}
+
+		public BuilderException(String message, Method method, Throwable cause) {
+			this(method.getName() + ": " + message, method.getDeclaringClass(), cause);
 		}
 
 		public BuilderException(String message, Method method) {
-			this(method.getDeclaringClass().getName() + ":" + method.getName() + ": " + message);
+			this(message, method, null);
+		}
+
+		public BuilderException(String message, LuaMethod method, Throwable cause) {
+			this(message, method.method, cause);
 		}
 
 		public BuilderException(String message, LuaMethod method) {
-			this(message, method.method);
+			this(message, method, null);
 		}
 	}
 }
