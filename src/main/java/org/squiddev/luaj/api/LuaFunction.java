@@ -13,12 +13,16 @@ import java.lang.annotation.Target;
 public @interface LuaFunction {
 	/**
 	 * The names of the Lua Function, defaults to the actual function name
+	 *
+	 * @return The names of this function
 	 */
 	public String[] value() default "";
 
 	/**
 	 * If this function returns multiple values (returns a {@link org.luaj.vm2.Varargs}
 	 * By default a {@link org.luaj.vm2.LuaTable} is returned if an array is returned
+	 *
+	 * @return If this function returns Varargs
 	 */
 	public boolean isVarArgs() default false;
 

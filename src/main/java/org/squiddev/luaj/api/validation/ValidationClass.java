@@ -15,6 +15,8 @@ import java.lang.annotation.Target;
 public @interface ValidationClass {
 	/**
 	 * The validation class to use. Should be an instance of {@link ILuaValidator}
+	 *
+	 * @return The validation class to use
 	 */
 	Class<? extends ILuaValidator> value() default DefaultLuaValidator.class;
 }

@@ -77,10 +77,10 @@ public class Parameter implements AnnotatedElement {
 
 	/**
 	 * Returns annotations that are <em>present</em> on this element.
-	 * <p/>
+	 * <p>
 	 * If there are no annotations <em>present</em> on this element, the return
 	 * value is an array of length 0.
-	 * <p/>
+	 * <p>
 	 * The caller of this method is free to modify the returned array; it will
 	 * have no effect on the arrays returned to other callers.
 	 *
@@ -95,10 +95,10 @@ public class Parameter implements AnnotatedElement {
 	/**
 	 * Returns annotations that are <em>directly present</em> on this element.
 	 * This method ignores inherited annotations.
-	 * <p/>
+	 * <p>
 	 * If there are no annotations <em>directly present</em> on this element,
 	 * the return value is an array of length 0.
-	 * <p/>
+	 * <p>
 	 * The caller of this method is free to modify the returned array; it will
 	 * have no effect on the arrays returned to other callers.
 	 *
@@ -112,7 +112,7 @@ public class Parameter implements AnnotatedElement {
 
 	/**
 	 * Return the {@code Method} which declares this parameter.
-	 * <p/>
+	 * <p>
 	 * Should return an Executable but that is only in 1.8
 	 *
 	 * @return The {@code Method} declaring this parameter.

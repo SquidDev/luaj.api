@@ -117,8 +117,9 @@ public class APIClassLoader<T extends LuaObject> extends ClassLoader {
 	 * Create a loader from the specified type
 	 *
 	 * @param parentClass The parent class to create from
-	 * @param <T>         The parent class to create from. This should be filled in automatically by {@see parentClass}
+	 * @param <T>         The parent class to create from. This should be filled in automatically by parentClass
 	 * @return The creates {@link APIClassLoader}
+	 * @see #parentClass
 	 */
 	public static <T extends LuaObject> APIClassLoader<T> createLoader(Class<T> parentClass) {
 		return new APIClassLoader<>(parentClass);

@@ -41,6 +41,8 @@ public abstract class LuaObject {
 
 	/**
 	 * Bind this API to an environment
+	 *
+	 * @param env The table/environment to bind this API to
 	 */
 	public void bind(LuaValue env) {
 		String[] names = getNames();

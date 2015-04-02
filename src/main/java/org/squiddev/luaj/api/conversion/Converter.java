@@ -31,7 +31,8 @@ public class Converter {
 	}
 
 	/**
-	 * Initialise the {@see #toLua} table
+	 * Initialise the toLua table
+	 * @see #toLua
 	 */
 	protected void initToLua() {
 		Map<Class<?>, TinyMethod> toLua = this.toLua;
@@ -69,7 +70,8 @@ public class Converter {
 	}
 
 	/**
-	 * Initialise the {@see #fromLua} table
+	 * Initialise the fromLua table
+	 * @see #fromLua
 	 */
 	protected void initFromLua() {
 		Map<Class<?>, TinyMethod> fromLua = this.fromLua;

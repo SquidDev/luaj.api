@@ -18,6 +18,7 @@ public @interface LuaAPI {
 	/**
 	 * The names of the Lua API
 	 *
+	 * @return Array of names this API should be set to
 	 * @see LuaObject#bind(LuaValue)
 	 */
 	String[] value() default "";
