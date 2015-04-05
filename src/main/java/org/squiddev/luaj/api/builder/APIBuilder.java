@@ -9,6 +9,7 @@ import org.squiddev.luaj.api.LuaFunction;
 import org.squiddev.luaj.api.LuaObject;
 import org.squiddev.luaj.api.conversion.Converter;
 import org.squiddev.luaj.api.conversion.IInjector;
+import org.squiddev.luaj.api.transformer.Transformer;
 import org.squiddev.luaj.api.utils.TinyMethod;
 import org.squiddev.luaj.api.validation.ILuaValidator;
 
@@ -85,11 +86,16 @@ public class APIBuilder {
 	public final Class<?> parent;
 
 	/**
-	 * Stores the conversion
+	 * Stores the conversion handler
 	 *
 	 * @see APIClassLoader#converter
 	 */
 	public final Converter converter;
+
+	/**
+	 * Extra transformers for methods
+	 */
+	public final Transformer transformer;
 
 	/**
 	 * Globals that this should be set to
@@ -118,6 +124,7 @@ public class APIBuilder {
 		writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
 		parent = loader.parentClass;
 		converter = loader.getConverter();
+		transformer = loader.getTransformer();
 
 		write();
 	}
@@ -143,7 +150,9 @@ public class APIBuilder {
 		for (Method m : klass.getMethods()) {
 			if (m.isAnnotationPresent(LuaFunction.class)) {
 				// Append items to the list
-				methods.add(new LuaMethod(m));
+				LuaMethod method = new LuaMethod(m);
+				transformer.transform(method);
+				methods.add(method);
 			}
 		}
 
@@ -181,10 +190,10 @@ public class APIBuilder {
 			mv.visitInsn(DUP);
 			constantOpcode(mv, counter);
 
-			String[] names = m.getLuaName();
+			List<String> names = m.names;
 
 			// Create an array of length <names.length>
-			constantOpcode(mv, names.length);
+			constantOpcode(mv, names.size());
 			mv.visitTypeInsn(ANEWARRAY, "java/lang/String");
 
 			int nameCounter = 0;
@@ -339,7 +348,7 @@ public class APIBuilder {
 				mv.visitTypeInsn(NEW, TYPE_LUAERROR);
 				mv.visitInsn(DUP);
 
-				String error = method.getError();
+				String error = method.errorMessage;
 				String text = builder.toString();
 				if (error == null) {
 					if (text.endsWith(", ")) text = text.substring(0, text.length() - 2);
@@ -407,7 +416,7 @@ public class APIBuilder {
 
 				// If we return an array then try return a {@link LuaTable} or {@link Varargs}
 				if (returns.isArray()) {
-					if (method.function.isVarArgs()) {
+					if (method.returnsVarags) {
 						VARARGS_OF.inject(mv);
 					} else {
 						LIST_OF.inject(mv);

@@ -16,7 +16,7 @@ public @interface LuaFunction {
 	 *
 	 * @return The names of this function
 	 */
-	public String[] value() default "";
+	String[] value() default "";
 
 	/**
 	 * If this function returns multiple values (returns a {@link org.luaj.vm2.Varargs}
@@ -24,7 +24,12 @@ public @interface LuaFunction {
 	 *
 	 * @return If this function returns Varargs
 	 */
-	public boolean isVarArgs() default false;
+	boolean isVarArgs() default false;
 
-	public String error() default "";
+	/**
+	 * A custom error message this function should produce
+	 *
+	 * @return The custom error message. {@code null} or a blank string if nothing
+	 */
+	String error() default "";
 }

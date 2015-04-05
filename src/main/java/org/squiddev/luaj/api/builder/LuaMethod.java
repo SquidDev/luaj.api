@@ -7,28 +7,63 @@ import org.squiddev.luaj.api.validation.ILuaValidator;
 import org.squiddev.luaj.api.validation.ValidationClass;
 
 import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Stores all data associated with a Lua function
  */
 public class LuaMethod implements Iterable<LuaMethod.LuaArgument> {
-	public final Class<?> type;
-	public final LuaFunction function;
+	/**
+	 * The actual method this will call
+	 */
 	public final Method method;
 
-	public final boolean varargs;
+	/**
+	 * If this method's last argument is a varargs
+	 */
+	public final boolean takesVarargs;
 
-	protected final LuaArgument[] arguments;
+	/**
+	 * If this method returns a varargs
+	 */
+	public boolean returnsVarags;
+
+	/**
+	 * The error message this function should produce
+	 * Null if it should be generated automatically
+	 */
+	public String errorMessage;
+
+	/**
+	 * The arguments this function takes
+	 */
+	public final LuaArgument[] arguments;
+
+	/**
+	 * The names this function should be called
+	 */
+	public final List<String> names;
 
 	public LuaMethod(Method m) {
-		function = m.getAnnotation(LuaFunction.class);
+		LuaFunction function = m.getAnnotation(LuaFunction.class);
 		method = m;
-		type = m.getDeclaringClass();
 
+		returnsVarags = function.isVarArgs();
+		errorMessage = function.error();
+		if (errorMessage != null && errorMessage.isEmpty()) {
+			errorMessage = null;
+		}
 
+		// Create the names of this function
+		String[] luaName = function.value();
+		if (luaName == null || luaName.length == 0 || (luaName.length == 1 && luaName[0].isEmpty())) {
+			names = new ArrayList<>();
+			names.add(m.getName());
+		} else {
+			names = Arrays.asList(luaName);
+		}
+
+		// Check if this function is a varargs function
 		boolean varargs = false;
 		Parameter[] params = Parameter.getParameters(m);
 		LuaArgument[] arguments = this.arguments = new LuaArgument[params.length];
@@ -45,7 +80,8 @@ public class LuaMethod implements Iterable<LuaMethod.LuaArgument> {
 			arguments[i] = new LuaArgument(param);
 		}
 
-		this.varargs = varargs;
+		this.takesVarargs = varargs;
+
 	}
 
 	/**
@@ -54,11 +90,7 @@ public class LuaMethod implements Iterable<LuaMethod.LuaArgument> {
 	 * @return A list of method names
 	 */
 	public String[] getLuaName() {
-		String[] luaName = function.value();
-		if (luaName == null || luaName.length == 0 || (luaName.length == 1 && luaName[0].isEmpty())) {
-			return new String[]{method.getName()};
-		}
-		return luaName;
+		return (String[]) names.toArray();
 	}
 
 	/**
@@ -68,16 +100,6 @@ public class LuaMethod implements Iterable<LuaMethod.LuaArgument> {
 	 */
 	public String getJavaName() {
 		return method.getName();
-	}
-
-	/**
-	 * Get the error to throw
-	 *
-	 * @return The error message to throw or null on nothing
-	 */
-	public String getError() {
-		String error = function.error();
-		return (error == null || error.isEmpty()) ? null : error;
 	}
 
 	@Override
@@ -98,13 +120,12 @@ public class LuaMethod implements Iterable<LuaMethod.LuaArgument> {
 		public final Class<?> type;
 		public final Class<? extends ILuaValidator> validatorType;
 
-		public LuaArgument(Parameter parameter) {
-			this(parameter.getType(), getValidator(parameter));
-		}
+		public final Parameter parameter;
 
-		public LuaArgument(Class<?> type, Class<? extends ILuaValidator> validator) {
-			this.type = type;
-			validatorType = validator;
+		public LuaArgument(Parameter parameter) {
+			this.parameter = parameter;
+			type = parameter.getType();
+			validatorType = getValidator(parameter);
 		}
 
 		public ILuaValidator getValidator() {
@@ -179,7 +200,7 @@ public class LuaMethod implements Iterable<LuaMethod.LuaArgument> {
 		}
 
 		public int length() {
-			return items.length - (varargs ? 1 : 0);
+			return items.length - (takesVarargs ? 1 : 0);
 		}
 
 		public void rewind() {

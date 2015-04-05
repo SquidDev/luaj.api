@@ -3,6 +3,8 @@ package org.squiddev.luaj.api.builder;
 import org.squiddev.luaj.api.LuaObject;
 import org.squiddev.luaj.api.LuaObjectWrapper;
 import org.squiddev.luaj.api.conversion.Converter;
+import org.squiddev.luaj.api.transformer.DefaultTransformers;
+import org.squiddev.luaj.api.transformer.Transformer;
 import org.squiddev.luaj.api.utils.AsmUtils;
 
 import java.util.Map;
@@ -31,6 +33,8 @@ public class APIClassLoader<T extends LuaObject> extends ClassLoader {
 	 * The method lookup for conversions
 	 */
 	protected Converter converter = Converter.getDefault();
+
+	protected Transformer transformer = new DefaultTransformers();
 
 	public APIClassLoader(Class<T> parentClass) {
 		this.parentClass = parentClass;
@@ -129,6 +133,16 @@ public class APIClassLoader<T extends LuaObject> extends ClassLoader {
 	 */
 	public Converter getConverter() {
 		return converter;
+	}
+
+	/**
+	 * Get the method transformer to use
+	 *
+	 * @return The transformer
+	 * @see #transformer
+	 */
+	public Transformer getTransformer() {
+		return transformer;
 	}
 
 	/**
