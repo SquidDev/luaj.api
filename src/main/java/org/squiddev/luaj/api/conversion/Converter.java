@@ -8,7 +8,8 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 import org.squiddev.luaj.api.LuaAPI;
 import org.squiddev.luaj.api.LuaObject;
-import org.squiddev.luaj.api.builder.APIBuilder;
+import org.squiddev.luaj.api.builder.IInjector;
+import org.squiddev.luaj.api.builder.tree.LuaMethod;
 import org.squiddev.luaj.api.utils.TinyMethod;
 
 import java.util.HashMap;
@@ -23,15 +24,21 @@ import static org.squiddev.luaj.api.builder.APIBuilder.*;
 public class Converter {
 	private static Converter instance;
 
+	protected static IInjector<LuaMethod> VOID = new IInjector<LuaMethod>() {
+		@Override
+		public void inject(MethodVisitor mv, LuaMethod object) {
+		}
+	};
+
 	/**
 	 * Methods that convert Java objects to {@link org.luaj.vm2.LuaValue}
 	 */
-	public final Map<Class<?>, IInjector> toLua = new HashMap<>();
+	protected final Map<Class<?>, IInjector<LuaMethod>> toLua = new HashMap<>();
 
 	/**
 	 * Methods that convert {@link org.luaj.vm2.LuaValue} to Java objects
 	 */
-	public final Map<Class<?>, IInjector> fromLua = new HashMap<>();
+	protected final Map<Class<?>, IInjector<LuaMethod>> fromLua = new HashMap<>();
 
 	public Converter() {
 		initFromLua();
@@ -44,38 +51,36 @@ public class Converter {
 	 * @see #toLua
 	 */
 	protected void initToLua() {
-		Map<Class<?>, IInjector> toLua = this.toLua;
-
 		// Boolean
-		toLua.put(boolean.class, new TinyMethod(LuaBoolean.class, "valueOf", boolean.class));
-		toLua.put(boolean[].class, new TinyMethod(ConversionHelpers.class, "valueOf", boolean[].class));
+		toLua(boolean.class, new TinyMethod(LuaBoolean.class, "valueOf", boolean.class));
+		toLua(boolean[].class, new TinyMethod(ConversionHelpers.class, "valueOf", boolean[].class));
 
 		// Integers
-		toLua.put(int.class, new TinyMethod(LuaInteger.class, "valueOf", int.class));
-		toLua.put(int[].class, new TinyMethod(ConversionHelpers.class, "valueOf", int[].class));
+		toLua(int.class, new TinyMethod(LuaInteger.class, "valueOf", int.class));
+		toLua(int[].class, new TinyMethod(ConversionHelpers.class, "valueOf", int[].class));
 
-		toLua.put(byte.class, new TinyMethod(LuaInteger.class, "valueOf", int.class));
-		toLua.put(byte[].class, new TinyMethod(ConversionHelpers.class, "valueOf", byte[].class));
+		toLua(byte.class, new TinyMethod(LuaInteger.class, "valueOf", int.class));
+		toLua(byte[].class, new TinyMethod(ConversionHelpers.class, "valueOf", byte[].class));
 
-		toLua.put(short.class, new TinyMethod(LuaInteger.class, "valueOf", int.class));
-		toLua.put(short[].class, new TinyMethod(ConversionHelpers.class, "valueOf", short[].class));
+		toLua(short.class, new TinyMethod(LuaInteger.class, "valueOf", int.class));
+		toLua(short[].class, new TinyMethod(ConversionHelpers.class, "valueOf", short[].class));
 
-		toLua.put(char.class, new TinyMethod(LuaInteger.class, "valueOf", int.class));
-		toLua.put(char[].class, new TinyMethod(ConversionHelpers.class, "valueOf", char[].class));
+		toLua(char.class, new TinyMethod(LuaInteger.class, "valueOf", int.class));
+		toLua(char[].class, new TinyMethod(ConversionHelpers.class, "valueOf", char[].class));
 
-		toLua.put(long.class, new TinyMethod(LuaInteger.class, "valueOf", long.class));
-		toLua.put(long[].class, new TinyMethod(ConversionHelpers.class, "valueOf", long[].class));
+		toLua(long.class, new TinyMethod(LuaInteger.class, "valueOf", long.class));
+		toLua(long[].class, new TinyMethod(ConversionHelpers.class, "valueOf", long[].class));
 
 		// Floats
-		toLua.put(double.class, new TinyMethod(LuaDouble.class, "valueOf", double.class));
-		toLua.put(double[].class, new TinyMethod(ConversionHelpers.class, "valueOf", double[].class));
+		toLua(double.class, new TinyMethod(LuaDouble.class, "valueOf", double.class));
+		toLua(double[].class, new TinyMethod(ConversionHelpers.class, "valueOf", double[].class));
 
-		toLua.put(float.class, new TinyMethod(LuaDouble.class, "valueOf", double.class));
-		toLua.put(float[].class, new TinyMethod(ConversionHelpers.class, "valueOf", float[].class));
+		toLua(float.class, new TinyMethod(LuaDouble.class, "valueOf", double.class));
+		toLua(float[].class, new TinyMethod(ConversionHelpers.class, "valueOf", float[].class));
 
 		// String
-		toLua.put(String.class, new TinyMethod(ConversionHelpers.class, "valueOf", String.class));
-		toLua.put(String[].class, new TinyMethod(ConversionHelpers.class, "valueOf", String[].class));
+		toLua(String.class, new TinyMethod(ConversionHelpers.class, "valueOf", String.class));
+		toLua(String[].class, new TinyMethod(ConversionHelpers.class, "valueOf", String[].class));
 	}
 
 	/**
@@ -84,17 +89,70 @@ public class Converter {
 	 * @see #fromLua
 	 */
 	protected void initFromLua() {
-		Map<Class<?>, IInjector> fromLua = this.fromLua;
+		fromLua(boolean.class, new TinyMethod(LuaValue.class, "toboolean"));
+		fromLua(byte.class, new TinyMethod(LuaValue.class, "tobyte"));
+		fromLua(char.class, new TinyMethod(LuaValue.class, "tochar"));
+		fromLua(double.class, new TinyMethod(LuaValue.class, "todouble"));
+		fromLua(float.class, new TinyMethod(LuaValue.class, "tofloat"));
+		fromLua(int.class, new TinyMethod(LuaValue.class, "toint"));
+		fromLua(long.class, new TinyMethod(LuaValue.class, "tolong"));
+		fromLua(short.class, new TinyMethod(LuaValue.class, "toshort"));
+		fromLua(String.class, new TinyMethod(LuaValue.class, "tojstring"));
+	}
 
-		fromLua.put(boolean.class, new TinyMethod(LuaValue.class, "toboolean"));
-		fromLua.put(byte.class, new TinyMethod(LuaValue.class, "tobyte"));
-		fromLua.put(char.class, new TinyMethod(LuaValue.class, "tochar"));
-		fromLua.put(double.class, new TinyMethod(LuaValue.class, "todouble"));
-		fromLua.put(float.class, new TinyMethod(LuaValue.class, "tofloat"));
-		fromLua.put(int.class, new TinyMethod(LuaValue.class, "toint"));
-		fromLua.put(long.class, new TinyMethod(LuaValue.class, "tolong"));
-		fromLua.put(short.class, new TinyMethod(LuaValue.class, "toshort"));
-		fromLua.put(String.class, new TinyMethod(LuaValue.class, "tojstring"));
+	/**
+	 * Wrap a {@link TinyMethod}
+	 *
+	 * @param method The method to wrap
+	 * @return A wrapped TinyMethod
+	 */
+	protected IInjector<LuaMethod> wrapMethod(final TinyMethod method) {
+		return new IInjector<LuaMethod>() {
+			@Override
+			public void inject(MethodVisitor mv, LuaMethod object) {
+				method.inject(mv);
+			}
+		};
+	}
+
+	/**
+	 * Add a converter from Java to Lua
+	 *
+	 * @param type      The Java type to convert
+	 * @param converter The converter to run
+	 */
+	public void toLua(Class<?> type, IInjector<LuaMethod> converter) {
+		toLua.put(type, converter);
+	}
+
+	/**
+	 * Add a converter from Java to Lua
+	 *
+	 * @param type      The Java type to convert
+	 * @param converter The converter to run
+	 */
+	public void toLua(Class<?> type, TinyMethod converter) {
+		toLua(type, wrapMethod(converter));
+	}
+
+	/**
+	 * Add a converter from Lua to Java type
+	 *
+	 * @param type      The Java type to convert to
+	 * @param converter The converter to run
+	 */
+	public void fromLua(Class<?> type, IInjector<LuaMethod> converter) {
+		fromLua.put(type, converter);
+	}
+
+	/**
+	 * Add a converter from Lua to Java type
+	 *
+	 * @param type      The Java type to convert to
+	 * @param converter The converter to run
+	 */
+	public void fromLua(Class<?> type, TinyMethod converter) {
+		fromLua(type, wrapMethod(converter));
 	}
 
 	/**
@@ -117,12 +175,12 @@ public class Converter {
 	 * @return The converter to use
 	 * @see #toLua
 	 */
-	public IInjector getToLua(final Class<?> klass) {
+	public IInjector<LuaMethod> getToLua(final Class<?> klass) {
 		if (klass.isAnnotationPresent(LuaAPI.class)) {
-			return new IInjector() {
+			return new IInjector<LuaMethod>() {
 				@Override
-				public void inject(MethodVisitor mv, APIBuilder builder) {
-					mv.visitFieldInsn(GETSTATIC, builder.className, LOADER, CLASS_LOADER);
+				public void inject(MethodVisitor mv, LuaMethod method) {
+					mv.visitFieldInsn(GETSTATIC, method.klass.name, LOADER, CLASS_LOADER);
 					mv.visitInsn(SWAP);
 					API_MAKE_INSTANCE.inject(mv);
 					API_GET_TABLE.inject(mv);
@@ -131,7 +189,7 @@ public class Converter {
 		}
 
 		if (LuaObject.class.isAssignableFrom(klass)) {
-			return API_GET_TABLE;
+			return wrapMethod(API_GET_TABLE);
 		}
 
 		return toLua.get(klass);
@@ -144,17 +202,17 @@ public class Converter {
 	 * @return The converter to use
 	 * @see #fromLua
 	 */
-	public IInjector getFromLua(final Class<?> klass) {
+	public IInjector<LuaMethod> getFromLua(final Class<?> klass) {
 		// Allows having just LuaValue or Object
 		// This allows for if you just want to package the annotations and nothing else when supplying an API
 		if (klass.equals(Object.class) || klass.isInstance(LuaValue.class)) {
-			return IInjector.VOID;
+			return VOID;
 		}
 
 		if (LuaValue.class.isAssignableFrom(klass)) {
-			return new IInjector() {
+			return new IInjector<LuaMethod>() {
 				@Override
-				public void inject(MethodVisitor mv, APIBuilder builder) {
+				public void inject(MethodVisitor mv, LuaMethod method) {
 					mv.visitTypeInsn(CHECKCAST, Type.getInternalName(klass));
 				}
 			};

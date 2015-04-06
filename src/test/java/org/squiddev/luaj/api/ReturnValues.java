@@ -6,7 +6,6 @@ import org.luaj.vm2.LuaNumber;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.Varargs;
-import org.luaj.vm2.lib.jse.JsePlatform;
 import org.squiddev.luaj.api.builder.APIClassLoader;
 
 import static org.junit.Assert.*;
@@ -23,9 +22,6 @@ public class ReturnValues {
 	public static void testCreateAPI() throws Exception {
 		loader = APIClassLoader.createLoader();
 		LuaObject api = loader.makeInstance(new EmbedClass());
-
-		// Set environment and bind to a variable
-		JsePlatform.debugGlobals();
 		table = api.getTable();
 	}
 

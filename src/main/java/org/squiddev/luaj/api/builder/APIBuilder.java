@@ -7,9 +7,9 @@ import org.objectweb.asm.*;
 import org.squiddev.luaj.api.LuaObject;
 import org.squiddev.luaj.api.builder.tree.LuaArgument;
 import org.squiddev.luaj.api.builder.tree.LuaClass;
+import org.squiddev.luaj.api.builder.tree.LuaField;
 import org.squiddev.luaj.api.builder.tree.LuaMethod;
 import org.squiddev.luaj.api.conversion.Converter;
-import org.squiddev.luaj.api.conversion.IInjector;
 import org.squiddev.luaj.api.utils.TinyMethod;
 import org.squiddev.luaj.api.validation.ILuaValidator;
 
@@ -99,11 +99,10 @@ public class APIBuilder {
 	 * @param loader The class loader to load from. This stores settings about various generation options
 	 */
 	public APIBuilder(String name, Class<?> klass, APIClassLoader loader) {
-		this.klass = new LuaClass(klass, loader.transformer);
+		this.klass = new LuaClass(className = name.replace('.', '/'), klass, loader.transformer);
 
 		originalName = Type.getInternalName(klass);
 		originalWhole = Type.getDescriptor(klass);
-		className = name.replace('.', '/');
 
 		writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
 		parent = loader.parentClass;
@@ -130,6 +129,7 @@ public class APIBuilder {
 
 		writeInit();
 		writeStaticInit();
+		writeSetup();
 		writeInvoke();
 
 		writer.visitEnd();
@@ -237,6 +237,42 @@ public class APIBuilder {
 		mv.visitEnd();
 	}
 
+	/**
+	 * Write an override to the
+	 * {@link LuaObject#setup()} method
+	 */
+	protected void writeSetup() {
+		Set<LuaField> fields = klass.fields;
+		if (fields.size() == 0) return;
+
+		MethodVisitor mv = writer.visitMethod(ACC_PUBLIC, "setup", "()V", null, null);
+		mv.visitCode();
+
+		// Parent setup
+		mv.visitVarInsn(ALOAD, 0);
+		mv.visitMethodInsn(INVOKESPECIAL, Type.getInternalName(parent), "setup", "()V", false);
+
+		for (LuaField field : fields) {
+			field.setup.inject(mv, field);
+
+			// Load instance
+			mv.visitVarInsn(ALOAD, 0);
+			mv.visitFieldInsn(GETFIELD, className, "instance", "Ljava/lang/Object;");
+			mv.visitTypeInsn(CHECKCAST, originalName);
+			mv.visitInsn(SWAP);
+			mv.visitFieldInsn(PUTFIELD, originalName, field.field.getName(), Type.getDescriptor(field.field.getType()));
+		}
+
+		// And return
+		mv.visitInsn(RETURN);
+		mv.visitMaxs(0, 0);
+		mv.visitEnd();
+
+	}
+
+	/**
+	 * Create the main {@link org.squiddev.luaj.api.LuaObjectWrapper#invoke(Varargs, int)} method
+	 */
 	protected void writeInvoke() {
 		MethodVisitor mv = writer.visitMethod(ACC_PUBLIC, "invoke", INVOKE_SIGNATURE, null, null);
 		mv.visitCode();
@@ -348,12 +384,12 @@ public class APIBuilder {
 					constantOpcode(mv, argCounter);
 					VARARGS_ARG.inject(mv);
 
-					IInjector type = converter.getFromLua(argType);
+					IInjector<LuaMethod> type = converter.getFromLua(argType);
 					if (type == null) {
 						throw new BuilderException("Cannot convert LuaValue to " + argType, method);
 					}
 
-					type.inject(mv, this);
+					type.inject(mv, method);
 				}
 
 				++argCounter;
@@ -371,12 +407,12 @@ public class APIBuilder {
 				// If it isn't an array or if it is and the array type isn't a subclass of LuaValue
 				if (!returns.isArray() || !LuaValue.class.isAssignableFrom(returns.getComponentType())) {
 					// Check if we have a converter
-					IInjector type = converter.getToLua(returns);
+					IInjector<LuaMethod> type = converter.getToLua(returns);
 					if (type == null) {
 						throw new BuilderException("Cannot convert " + returns.getName() + " to LuaValue for ", method);
 					}
 
-					type.inject(mv, this);
+					type.inject(mv, method);
 				}
 
 				// If we return an array then try return a {@link LuaTable} or {@link Varargs}
@@ -442,6 +478,14 @@ public class APIBuilder {
 
 		public BuilderException(String message, LuaArgument argument) {
 			this(message, argument, null);
+		}
+
+		public BuilderException(String message, LuaField field, Throwable cause) {
+			this(field.field.getName() + ": " + message, field.klass, cause);
+		}
+
+		public BuilderException(String message, LuaField field) {
+			this(message, field, null);
 		}
 	}
 }

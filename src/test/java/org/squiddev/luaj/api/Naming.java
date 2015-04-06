@@ -44,6 +44,12 @@ public class Naming {
 		assertTrue(table.get("two").isfunction());
 	}
 
+	@Test
+	public void setsAliases() {
+		assertTrue(table.get("baz").isfunction());
+		assertTrue(table.get("qux").isfunction());
+	}
+
 	/**
 	 * Renamed functions shouldn't be the same
 	 */
@@ -61,6 +67,12 @@ public class Naming {
 
 		@LuaFunction
 		public Varargs bar(Varargs args) {
+			return args;
+		}
+
+		@LuaFunction
+		@Alias("qux")
+		public Varargs baz(Varargs args) {
 			return args;
 		}
 	}

@@ -29,6 +29,12 @@ public abstract class LuaObject {
 	protected abstract LuaTable createTable();
 
 	/**
+	 * Called post table creation
+	 */
+	protected void setup() {
+	}
+
+	/**
 	 * Get or create the API's function table
 	 *
 	 * @return A table with each key being a function bound to the original API
@@ -36,7 +42,11 @@ public abstract class LuaObject {
 	 */
 	public LuaTable getTable() {
 		LuaTable table = this.table;
-		return table == null ? this.table = createTable() : table;
+		if (table == null) {
+			table = this.table = createTable();
+			setup();
+		}
+		return table;
 	}
 
 	/**

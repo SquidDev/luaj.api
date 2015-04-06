@@ -5,7 +5,6 @@ import org.junit.Test;
 import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
-import org.luaj.vm2.lib.jse.JsePlatform;
 import org.squiddev.luaj.api.builder.APIClassLoader;
 
 import static org.junit.Assert.assertEquals;
@@ -20,9 +19,6 @@ public class MetaMethods {
 	@BeforeClass
 	public static void testCreateAPI() throws Exception {
 		LuaObject api = APIClassLoader.createLoader().makeInstance(new EmbedClass());
-
-		// Set environment and bind to a variable
-		JsePlatform.debugGlobals();
 		table = api.getTable();
 	}
 

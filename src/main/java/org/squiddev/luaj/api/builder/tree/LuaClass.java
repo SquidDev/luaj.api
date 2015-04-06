@@ -7,6 +7,7 @@ import org.squiddev.luaj.api.transformer.Transformer;
 import org.squiddev.luaj.api.validation.DefaultLuaValidator;
 import org.squiddev.luaj.api.validation.ILuaValidator;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.Set;
@@ -15,6 +16,11 @@ import java.util.Set;
  * Data about the class we are generating data about
  */
 public class LuaClass {
+	/**
+	 * The name of the generated class
+	 */
+	public final String name;
+
 	/**
 	 * The class we are generating method from
 	 */
@@ -33,6 +39,11 @@ public class LuaClass {
 	public final Set<LuaMethod> methods = new HashSet<>();
 
 	/**
+	 * List of fields this class uses
+	 */
+	public final Set<LuaField> fields = new HashSet<>();
+
+	/**
 	 * The transformer this class uses
 	 */
 	public final Transformer transformer;
@@ -42,7 +53,8 @@ public class LuaClass {
 	 */
 	public Class<? extends ILuaValidator> validator = DefaultLuaValidator.class;
 
-	public LuaClass(Class<?> klass, Transformer transformer) {
+	public LuaClass(String name, Class<?> klass, Transformer transformer) {
+		this.name = name;
 		this.klass = klass;
 
 		// Run the transformer on this class
@@ -58,5 +70,11 @@ public class LuaClass {
 		}
 
 		if (methods.size() == 0) throw new APIBuilder.BuilderException("No @LuaFunction methods", this);
+
+		Set<LuaField> fields = this.fields;
+		for (Field field : klass.getFields()) {
+			LuaField f = new LuaField(this, field);
+			if (f.setup != null) fields.add(f);
+		}
 	}
 }

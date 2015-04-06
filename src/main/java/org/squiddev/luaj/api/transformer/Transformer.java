@@ -2,6 +2,7 @@ package org.squiddev.luaj.api.transformer;
 
 import org.squiddev.luaj.api.builder.tree.LuaArgument;
 import org.squiddev.luaj.api.builder.tree.LuaClass;
+import org.squiddev.luaj.api.builder.tree.LuaField;
 import org.squiddev.luaj.api.builder.tree.LuaMethod;
 
 import java.lang.annotation.Annotation;
@@ -15,6 +16,7 @@ public class Transformer {
 	public Map<Class<? extends Annotation>, AnnotationWrapper<LuaClass, ? extends Annotation>> classTransformers = new HashMap<>();
 	public Map<Class<? extends Annotation>, AnnotationWrapper<LuaMethod, ? extends Annotation>> methodTransformers = new HashMap<>();
 	public Map<Class<? extends Annotation>, AnnotationWrapper<LuaArgument, ? extends Annotation>> argumentTransformers = new HashMap<>();
+	public Map<Class<? extends Annotation>, AnnotationWrapper<LuaField, ? extends Annotation>> fieldTransformers = new HashMap<>();
 
 	public <A extends Annotation> void addClassTransformer(Class<A> annotation, ITransformer<LuaClass, A> transformer) {
 		classTransformers.put(annotation, new AnnotationWrapper<>(transformer));
@@ -26,6 +28,10 @@ public class Transformer {
 
 	public <A extends Annotation> void addArgumentTransformer(Class<A> annotation, ITransformer<LuaArgument, A> transformer) {
 		argumentTransformers.put(annotation, new AnnotationWrapper<>(transformer));
+	}
+
+	public <A extends Annotation> void addFieldTransformer(Class<A> annotation, ITransformer<LuaField, A> transformer) {
+		fieldTransformers.put(annotation, new AnnotationWrapper<>(transformer));
 	}
 
 	public void transform(LuaClass klass) {
@@ -51,6 +57,15 @@ public class Transformer {
 			AnnotationWrapper<LuaArgument, ? extends Annotation> transformer = argumentTransformers.get(annotation.annotationType());
 			if (transformer != null) {
 				transformer.transform(arg, annotation);
+			}
+		}
+	}
+
+	public void transform(LuaField field) {
+		for (Annotation annotation : field.field.getAnnotations()) {
+			AnnotationWrapper<LuaField, ? extends Annotation> transformer = fieldTransformers.get(annotation.annotationType());
+			if (transformer != null) {
+				transformer.transform(field, annotation);
 			}
 		}
 	}

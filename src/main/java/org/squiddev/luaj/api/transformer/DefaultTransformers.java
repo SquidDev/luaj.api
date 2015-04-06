@@ -4,7 +4,9 @@ import org.squiddev.luaj.api.Alias;
 import org.squiddev.luaj.api.LuaAPI;
 import org.squiddev.luaj.api.builder.tree.LuaArgument;
 import org.squiddev.luaj.api.builder.tree.LuaClass;
+import org.squiddev.luaj.api.builder.tree.LuaField;
 import org.squiddev.luaj.api.builder.tree.LuaMethod;
+import org.squiddev.luaj.api.setters.Setter;
 import org.squiddev.luaj.api.validation.ValidationClass;
 
 import java.util.Collections;
@@ -49,6 +51,13 @@ public class DefaultTransformers extends Transformer {
 			@Override
 			public void transform(LuaArgument target, ValidationClass annotation) {
 				target.validator = annotation.value();
+			}
+		});
+
+		addFieldTransformer(Setter.class, new ITransformer<LuaField, Setter>() {
+			@Override
+			public void transform(LuaField target, Setter annotation) {
+				target.setup = Setter.SetterCache.getInstance(annotation.value());
 			}
 		});
 	}
