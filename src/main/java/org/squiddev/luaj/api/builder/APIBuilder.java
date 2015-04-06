@@ -4,18 +4,16 @@ import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.Varargs;
 import org.objectweb.asm.*;
-import org.squiddev.luaj.api.LuaAPI;
-import org.squiddev.luaj.api.LuaFunction;
 import org.squiddev.luaj.api.LuaObject;
+import org.squiddev.luaj.api.builder.tree.LuaArgument;
+import org.squiddev.luaj.api.builder.tree.LuaClass;
+import org.squiddev.luaj.api.builder.tree.LuaMethod;
 import org.squiddev.luaj.api.conversion.Converter;
 import org.squiddev.luaj.api.conversion.IInjector;
-import org.squiddev.luaj.api.transformer.Transformer;
 import org.squiddev.luaj.api.utils.TinyMethod;
 import org.squiddev.luaj.api.validation.ILuaValidator;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Set;
 
 import static org.objectweb.asm.Opcodes.*;
 import static org.squiddev.luaj.api.utils.AsmUtils.constantOpcode;
@@ -51,10 +49,6 @@ public class APIBuilder {
 
 	public static final TinyMethod API_MAKE_INSTANCE = new TinyMethod(APIClassLoader.class, "makeInstance", Object.class);
 	public static final TinyMethod API_GET_TABLE = new TinyMethod(LuaObject.class, "getTable");
-	/**
-	 * The class we build the wrapper for
-	 */
-	protected final Class<?> klass;
 
 	/**
 	 * The {@link ClassWriter} for the wrapper class
@@ -93,19 +87,9 @@ public class APIBuilder {
 	public final Converter converter;
 
 	/**
-	 * Extra transformers for methods
+	 * Data about the class
 	 */
-	public final Transformer transformer;
-
-	/**
-	 * Globals that this should be set to
-	 */
-	protected String[] names = null;
-
-	/**
-	 * List of methods
-	 */
-	protected List<LuaMethod> methods;
+	public final LuaClass klass;
 
 	/**
 	 * Create a new {@link APIBuilder}
@@ -115,7 +99,7 @@ public class APIBuilder {
 	 * @param loader The class loader to load from. This stores settings about various generation options
 	 */
 	public APIBuilder(String name, Class<?> klass, APIClassLoader loader) {
-		this.klass = klass;
+		this.klass = new LuaClass(klass, loader.transformer);
 
 		originalName = Type.getInternalName(klass);
 		originalWhole = Type.getDescriptor(klass);
@@ -124,7 +108,6 @@ public class APIBuilder {
 		writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
 		parent = loader.parentClass;
 		converter = loader.getConverter();
-		transformer = loader.getTransformer();
 
 		write();
 	}
@@ -145,27 +128,6 @@ public class APIBuilder {
 		// LOADER is setup in the class loader. This allows us to load other classes
 		writer.visitField(ACC_PRIVATE | ACC_FINAL | ACC_STATIC, LOADER, CLASS_LOADER, null, null).visitEnd();
 
-		// Read all methods
-		List<LuaMethod> methods = this.methods = new ArrayList<>();
-		for (Method m : klass.getMethods()) {
-			if (m.isAnnotationPresent(LuaFunction.class)) {
-				// Append items to the list
-				LuaMethod method = new LuaMethod(m);
-				transformer.transform(method);
-				methods.add(method);
-			}
-		}
-
-		if (methods.size() == 0) throw new BuilderException("No LuaFunction methods", klass);
-
-		if (klass.isAnnotationPresent(LuaAPI.class)) {
-			names = klass.getAnnotation(LuaAPI.class).value();
-			// If we have the LuaAPI annotation then we should ensure that this is set as an API
-			if (names == null || names.length == 0) {
-				names = new String[]{klass.getSimpleName().toLowerCase()};
-			}
-		}
-
 		writeInit();
 		writeStaticInit();
 		writeInvoke();
@@ -175,22 +137,22 @@ public class APIBuilder {
 
 	/**
 	 * Write the static constructor
-	 * This constructs the array of array of names.
+	 * This constructs the array of array of names and method names
 	 */
 	protected void writeStaticInit() {
 		MethodVisitor mv = writer.visitMethod(ACC_STATIC, "<clinit>", "()V", null, null);
 		mv.visitCode();
 
-		constantOpcode(mv, methods.size());
+		constantOpcode(mv, klass.methods.size());
 		mv.visitTypeInsn(ANEWARRAY, "[Ljava/lang/String;");
 
 		int counter = 0;
-		for (LuaMethod m : methods) {
+		for (LuaMethod m : klass.methods) {
 			// For key <counter>
 			mv.visitInsn(DUP);
 			constantOpcode(mv, counter);
 
-			List<String> names = m.names;
+			Set<String> names = m.names;
 
 			// Create an array of length <names.length>
 			constantOpcode(mv, names.size());
@@ -215,14 +177,14 @@ public class APIBuilder {
 		mv.visitFieldInsn(PUTSTATIC, className, METHOD_NAMES, METHOD_NAMES_SIGNATURE);
 
 		// Visit names
-		if (names == null) {
+		if (klass.names.size() == 0) {
 			mv.visitInsn(ACONST_NULL);
 		} else {
-			constantOpcode(mv, names.length);
+			constantOpcode(mv, klass.names.size());
 			mv.visitTypeInsn(ANEWARRAY, "java/lang/String");
 
 			counter = 0;
-			for (String name : names) {
+			for (String name : klass.names) {
 				mv.visitInsn(DUP);
 				constantOpcode(mv, counter);
 				mv.visitLdcInsn(name);
@@ -284,7 +246,7 @@ public class APIBuilder {
 
 		Label defaultLabel = new Label();
 
-		int size = methods.size();
+		int size = klass.methods.size();
 		Label[] labels = new Label[size];
 
 		for (int i = 0; i < size; i++) {
@@ -295,8 +257,8 @@ public class APIBuilder {
 		mv.visitTableSwitchInsn(0, size - 1, defaultLabel, labels);
 
 		int counter = 0;
-		for (LuaMethod method : methods) {
-			// Initial stuff
+		for (LuaMethod method : klass.methods) {
+			// Setup the jump for this method
 			mv.visitLabel(labels[counter]);
 			mv.visitFrame(F_SAME, 0, null, 0, null);
 
@@ -307,17 +269,18 @@ public class APIBuilder {
 			Label doException = new Label();
 			Label noException = new Label();
 
-			if (needsValidation) {
+			// If we should validate then assert how many values there are
+			if (needsValidation && iterator.requiredLength() > 0) {
 				mv.visitVarInsn(ALOAD, 1);
 				VARARGS_NARGS.inject(mv);
-				constantOpcode(mv, iterator.length());
+				constantOpcode(mv, iterator.requiredLength());
 				mv.visitJumpInsn(IF_ICMPLT, doException);
 			}
 
 			int index = 1;
 			while (iterator.hasNext()) {
-				LuaMethod.LuaArgument arg = iterator.next();
-				Class<?> type = arg.type;
+				LuaArgument arg = iterator.next();
+				Class<?> type = arg.parameter.getType();
 				ILuaValidator validator = arg.getValidator();
 
 				// If the item is a varargs then we shouldn't give it a name. Varargs will always be the last item
@@ -363,18 +326,18 @@ public class APIBuilder {
 				mv.visitFrame(F_SAME, 0, null, 0, null);
 			}
 
-			// Check the object is correct
+			// Load the instance and validate its type
 			mv.visitVarInsn(ALOAD, 0);
 			mv.visitFieldInsn(GETFIELD, className, "instance", "Ljava/lang/Object;");
 			mv.visitTypeInsn(CHECKCAST, originalName);
 
-			// Load the arguments
+			// Load and convert the arguments
 			int argCounter = 1;
 			iterator.rewind();
-			for (LuaMethod.LuaArgument arg : iterator) {
+			for (LuaArgument arg : iterator) {
 				mv.visitVarInsn(ALOAD, 1);
 
-				Class<?> argType = arg.type;
+				Class<?> argType = arg.parameter.getType();
 				if (argType.equals(Varargs.class)) {
 					// If we just have varargs then we should load it, if we have varargs later then use subargs
 					if (argCounter > 1) {
@@ -397,13 +360,15 @@ public class APIBuilder {
 			}
 
 			// And call it
-			mv.visitMethodInsn(INVOKEVIRTUAL, originalName, method.getJavaName(), Type.getMethodDescriptor(method.method), false);
+			mv.visitMethodInsn(INVOKEVIRTUAL, originalName, method.method.getName(), Type.getMethodDescriptor(method.method), false);
 
 			Class<?> returns = method.method.getReturnType();
 			if (returns.equals(Void.TYPE)) {
 				// If no result, return None
 				mv.visitFieldInsn(GETSTATIC, TYPE_LUAVALUE, "NONE", CLASS_LUAVALUE);
 			} else if (!Varargs.class.isAssignableFrom(returns)) { // Don't need to convert if returning a LuaValue
+
+				// If it isn't an array or if it is and the array type isn't a subclass of LuaValue
 				if (!returns.isArray() || !LuaValue.class.isAssignableFrom(returns.getComponentType())) {
 					// Check if we have a converter
 					IInjector type = converter.getToLua(returns);
@@ -455,28 +420,28 @@ public class APIBuilder {
 			super(message, null);
 		}
 
-		public BuilderException(String message, Class javaClass, Throwable cause) {
-			this(javaClass.getName() + ": " + message, cause);
+		public BuilderException(String message, LuaClass klass, Throwable cause) {
+			this(klass.klass.getName() + ": " + message, cause);
 		}
 
-		public BuilderException(String message, Class javaClass) {
-			this(message, javaClass, null);
-		}
-
-		public BuilderException(String message, Method method, Throwable cause) {
-			this(method.getName() + ": " + message, method.getDeclaringClass(), cause);
-		}
-
-		public BuilderException(String message, Method method) {
-			this(message, method, null);
+		public BuilderException(String message, LuaClass klass) {
+			this(message, klass, null);
 		}
 
 		public BuilderException(String message, LuaMethod method, Throwable cause) {
-			this(message, method.method, cause);
+			this(method.method.getName() + ": " + message, method.klass, cause);
 		}
 
 		public BuilderException(String message, LuaMethod method) {
 			this(message, method, null);
+		}
+
+		public BuilderException(String message, LuaArgument argument, Throwable cause) {
+			this("Argument " + argument.parameter.getType() + ": " + message, argument.method, cause);
+		}
+
+		public BuilderException(String message, LuaArgument argument) {
+			this(message, argument, null);
 		}
 	}
 }
