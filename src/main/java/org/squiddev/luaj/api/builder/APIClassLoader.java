@@ -3,6 +3,7 @@ package org.squiddev.luaj.api.builder;
 import org.squiddev.luaj.api.LuaObject;
 import org.squiddev.luaj.api.LuaObjectWrapper;
 import org.squiddev.luaj.api.builder.generator.ClassBuilder;
+import org.squiddev.luaj.api.builder.generator.JoinedClassBuilder;
 import org.squiddev.luaj.api.utils.AsmUtils;
 
 import java.util.HashMap;
@@ -27,7 +28,7 @@ public class APIClassLoader<T extends LuaObject> extends ClassLoader {
 	/**
 	 * Cache for class names to bytes
 	 */
-	protected final Map<String, byte[]> byteCache = new HashMap<>();
+	protected Map<String, byte[]> byteCache = new HashMap<>();
 
 	/**
 	 * A cache for created instances instead
@@ -99,7 +100,18 @@ public class APIClassLoader<T extends LuaObject> extends ClassLoader {
 	 */
 	@SuppressWarnings("unchecked")
 	protected Class<? extends T> createClass(String name, Class<?> original) {
-		return (Class<? extends T>) defineClass(name, new ClassBuilder(name, original, settings).toByteArray());
+		return (Class<? extends T>) defineClass(name, createBuilder(name, original).writeClasses(byteCache));
+	}
+
+	/**
+	 * Create a builder for this class
+	 *
+	 * @param name     Name of the class to load
+	 * @param original The original class we are using
+	 * @return The created class builder
+	 */
+	protected ClassBuilder createBuilder(String name, Class<?> original) {
+		return new JoinedClassBuilder(name, original, settings);
 	}
 
 	/**
