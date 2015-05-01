@@ -3,7 +3,7 @@ package org.squiddev.luaj.api.setters;
 import org.luaj.vm2.LuaTable;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
-import org.squiddev.luaj.api.builder.APIBuilder;
+import org.squiddev.luaj.api.builder.BuilderException;
 import org.squiddev.luaj.api.builder.IInjector;
 import org.squiddev.luaj.api.builder.tree.LuaField;
 
@@ -25,7 +25,7 @@ public class TableSetter implements IInjector<LuaField> {
 	@Override
 	public void inject(MethodVisitor visitor, LuaField field) {
 		if (!field.field.getType().isAssignableFrom(LuaTable.class)) {
-			throw new APIBuilder.BuilderException("Cannot convert " + field.field.getType().getName() + " to LuaTable", field);
+			throw new BuilderException("Cannot convert " + field.field.getType().getName() + " to LuaTable", field);
 		}
 
 		visitor.visitVarInsn(ALOAD, 0);

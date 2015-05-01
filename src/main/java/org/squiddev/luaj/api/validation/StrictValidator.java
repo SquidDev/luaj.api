@@ -3,7 +3,7 @@ package org.squiddev.luaj.api.validation;
 import org.luaj.vm2.LuaValue;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
-import org.squiddev.luaj.api.builder.APIBuilder;
+import org.squiddev.luaj.api.builder.BuilderException;
 
 import static org.objectweb.asm.Opcodes.INSTANCEOF;
 
@@ -33,7 +33,7 @@ public class StrictValidator extends DefaultLuaValidator {
 		} else if (LuaValue.class.isAssignableFrom(type)) {
 			mv.visitTypeInsn(INSTANCEOF, Type.getInternalName(type));
 		} else {
-			throw new APIBuilder.BuilderException("Cannot validate " + type.getName());
+			throw new BuilderException("Cannot validate " + type.getName());
 		}
 	}
 }

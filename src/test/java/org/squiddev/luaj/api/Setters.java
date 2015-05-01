@@ -4,8 +4,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.Varargs;
-import org.squiddev.luaj.api.builder.APIBuilder;
 import org.squiddev.luaj.api.builder.APIClassLoader;
+import org.squiddev.luaj.api.builder.BuilderException;
 import org.squiddev.luaj.api.setters.LoaderSetter;
 import org.squiddev.luaj.api.setters.Setter;
 import org.squiddev.luaj.api.setters.TableSetter;
@@ -40,7 +40,7 @@ public class Setters {
 
 	@Test
 	public void validatesLoader() {
-		ExpectException.expect(APIBuilder.BuilderException.class, "Cannot convert java.lang.String to APIClassLoader", true, new Runnable() {
+		ExpectException.expect(BuilderException.class, "Cannot convert java.lang.String to APIClassLoader", true, new Runnable() {
 			@Override
 			public void run() {
 				loader.makeInstance(new EmbedClass() {
@@ -50,7 +50,7 @@ public class Setters {
 			}
 		});
 
-		ExpectException.expect(APIBuilder.BuilderException.class, "Cannot convert java.lang.String to LuaTable", true, new Runnable() {
+		ExpectException.expect(BuilderException.class, "Cannot convert java.lang.String to LuaTable", true, new Runnable() {
 			@Override
 			public void run() {
 				loader.makeInstance(new EmbedClass() {

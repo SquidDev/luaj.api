@@ -1,7 +1,6 @@
 package org.squiddev.luaj.api.setters;
 
-import org.squiddev.luaj.api.builder.APIBuilder;
-import org.squiddev.luaj.api.builder.APIClassLoader;
+import org.squiddev.luaj.api.builder.BuilderException;
 import org.squiddev.luaj.api.builder.IInjector;
 import org.squiddev.luaj.api.builder.tree.LuaField;
 
@@ -21,7 +20,7 @@ public @interface Setter {
 	/**
 	 * The rule used to set this value
 	 *
-	 * {@code this} will be an instance of {@link APIClassLoader#parentClass}
+	 * {@code this} will be an instance of {@link org.squiddev.luaj.api.builder.BuilderSettings#parentClass}
 	 * It should leave one value on the stack when used to set the field
 	 *
 	 * @return The rule used
@@ -41,7 +40,7 @@ public @interface Setter {
 				try {
 					setter = setterClass.newInstance();
 				} catch (ReflectiveOperationException e) {
-					throw new APIBuilder.BuilderException("Cannot create " + setterClass.getName(), e);
+					throw new BuilderException("Cannot create " + setterClass.getName(), e);
 				}
 
 				cache.put(setterClass, setter);

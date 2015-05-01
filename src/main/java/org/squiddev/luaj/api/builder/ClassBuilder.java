@@ -1,6 +1,5 @@
 package org.squiddev.luaj.api.builder;
 
-import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.Varargs;
 import org.objectweb.asm.*;
@@ -9,7 +8,6 @@ import org.squiddev.luaj.api.builder.tree.LuaArgument;
 import org.squiddev.luaj.api.builder.tree.LuaClass;
 import org.squiddev.luaj.api.builder.tree.LuaField;
 import org.squiddev.luaj.api.builder.tree.LuaMethod;
-import org.squiddev.luaj.api.utils.TinyMethod;
 import org.squiddev.luaj.api.validation.ILuaValidator;
 
 import java.util.Set;
@@ -17,38 +15,11 @@ import java.util.Set;
 import static org.objectweb.asm.Opcodes.*;
 import static org.squiddev.luaj.api.utils.AsmUtils.constantOpcode;
 
+
 /**
  * Builds ASM code to call an API
  */
-public class APIBuilder {
-	// A CLASS_ Starts is the L...; a TYPE_ is not
-	public static final String CLASS_VARARGS = Type.getDescriptor(Varargs.class);
-	public static final String CLASS_LUAVALUE = Type.getDescriptor(LuaValue.class);
-	public static final String TYPE_LUAVALUE = Type.getInternalName(LuaValue.class);
-	public static final String TYPE_LUAERROR = Type.getInternalName(LuaError.class);
-
-	public static final String CLASS_LOADER = Type.getDescriptor(APIClassLoader.class);
-	public static final String TYPE_LOADER = Type.getInternalName(APIClassLoader.class);
-
-	public static final String INVOKE_SIGNATURE = "(" + CLASS_VARARGS + "I)" + CLASS_VARARGS;
-
-	public static final String LOADER = "LOADER";
-
-	public static final String NAMES = "NAMES";
-	public static final String NAMES_SIGNATURE = "[Ljava/lang/String;";
-
-	public static final String METHOD_NAMES = "METHOD_NAMES";
-	public static final String METHOD_NAMES_SIGNATURE = "[[Ljava/lang/String;";
-
-	public static final TinyMethod VARARGS_NARGS = new TinyMethod(Varargs.class, "narg");
-	public static final TinyMethod VARARGS_ARG = new TinyMethod(Varargs.class, "arg", int.class);
-	public static final TinyMethod VARARGS_SUBARGS = new TinyMethod(Varargs.class, "subargs", int.class);
-	public static final TinyMethod VARARGS_OF = new TinyMethod(LuaValue.class, "varargsOf", LuaValue[].class);
-	public static final TinyMethod LIST_OF = new TinyMethod(LuaValue.class, "listOf", LuaValue[].class);
-
-	public static final TinyMethod API_MAKE_INSTANCE = new TinyMethod(APIClassLoader.class, "makeInstance", Object.class);
-	public static final TinyMethod API_GET_TABLE = new TinyMethod(LuaObject.class, "getTable");
-
+public class ClassBuilder {
 	/**
 	 * The {@link ClassWriter} for the wrapper class
 	 */
@@ -82,13 +53,13 @@ public class APIBuilder {
 	public final LuaClass klass;
 
 	/**
-	 * Create a new {@link APIBuilder}
+	 * Create a new {@link ClassBuilder}
 	 *
 	 * @param name     The name of the generated class
 	 * @param klass    The class we build a wrapper around
 	 * @param settings Settings for various generation options
 	 */
-	public APIBuilder(String name, Class<?> klass, BuilderSettings settings) {
+	public ClassBuilder(String name, Class<?> klass, BuilderSettings settings) {
 		this.klass = new LuaClass(className = name.replace('.', '/'), klass, settings);
 		this.settings = settings;
 
@@ -108,13 +79,13 @@ public class APIBuilder {
 		writer.visit(V1_6, ACC_PUBLIC + ACC_SUPER, className, null, Type.getInternalName(settings.parentClass), null);
 
 		// Declare METHOD_NAMES
-		writer.visitField(ACC_PRIVATE | ACC_FINAL | ACC_STATIC, METHOD_NAMES, METHOD_NAMES_SIGNATURE, null, null).visitEnd();
+		writer.visitField(ACC_PRIVATE | ACC_FINAL | ACC_STATIC, BuilderConstants.METHOD_NAMES, BuilderConstants.METHOD_NAMES_SIGNATURE, null, null).visitEnd();
 
 		// Declare NAMES
-		writer.visitField(ACC_PRIVATE | ACC_FINAL | ACC_STATIC, NAMES, NAMES_SIGNATURE, null, null).visitEnd();
+		writer.visitField(ACC_PRIVATE | ACC_FINAL | ACC_STATIC, BuilderConstants.NAMES, BuilderConstants.NAMES_SIGNATURE, null, null).visitEnd();
 
 		// LOADER is setup in the class loader. This allows us to load other classes
-		writer.visitField(ACC_PRIVATE | ACC_FINAL | ACC_STATIC, LOADER, CLASS_LOADER, null, null).visitEnd();
+		writer.visitField(ACC_PRIVATE | ACC_FINAL | ACC_STATIC, BuilderConstants.LOADER, BuilderConstants.CLASS_LOADER, null, null).visitEnd();
 
 		writeInit();
 		writeStaticInit();
@@ -163,7 +134,7 @@ public class APIBuilder {
 			++counter;
 		}
 
-		mv.visitFieldInsn(PUTSTATIC, className, METHOD_NAMES, METHOD_NAMES_SIGNATURE);
+		mv.visitFieldInsn(PUTSTATIC, className, BuilderConstants.METHOD_NAMES, BuilderConstants.METHOD_NAMES_SIGNATURE);
 
 		// Visit names
 		if (klass.names.size() == 0) {
@@ -183,13 +154,13 @@ public class APIBuilder {
 			}
 		}
 
-		mv.visitFieldInsn(PUTSTATIC, className, NAMES, NAMES_SIGNATURE);
+		mv.visitFieldInsn(PUTSTATIC, className, BuilderConstants.NAMES, BuilderConstants.NAMES_SIGNATURE);
 
 		// Setup the class loader
 		mv.visitLdcInsn(Type.getType("L" + className + ";"));
 		mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Class", "getClassLoader", "()Ljava/lang/ClassLoader;", false);
-		mv.visitTypeInsn(CHECKCAST, TYPE_LOADER);
-		mv.visitFieldInsn(PUTSTATIC, className, LOADER, CLASS_LOADER);
+		mv.visitTypeInsn(CHECKCAST, BuilderConstants.TYPE_LOADER);
+		mv.visitFieldInsn(PUTSTATIC, className, BuilderConstants.LOADER, BuilderConstants.CLASS_LOADER);
 
 		mv.visitInsn(RETURN);
 
@@ -212,13 +183,13 @@ public class APIBuilder {
 
 		// Set method names
 		mv.visitVarInsn(ALOAD, 0);
-		mv.visitFieldInsn(GETSTATIC, className, METHOD_NAMES, METHOD_NAMES_SIGNATURE);
-		mv.visitFieldInsn(PUTFIELD, className, "methodNames", METHOD_NAMES_SIGNATURE);
+		mv.visitFieldInsn(GETSTATIC, className, BuilderConstants.METHOD_NAMES, BuilderConstants.METHOD_NAMES_SIGNATURE);
+		mv.visitFieldInsn(PUTFIELD, className, "methodNames", BuilderConstants.METHOD_NAMES_SIGNATURE);
 
 		// Set method API names
 		mv.visitVarInsn(ALOAD, 0);
-		mv.visitFieldInsn(GETSTATIC, className, NAMES, NAMES_SIGNATURE);
-		mv.visitFieldInsn(PUTFIELD, className, "names", NAMES_SIGNATURE);
+		mv.visitFieldInsn(GETSTATIC, className, BuilderConstants.NAMES, BuilderConstants.NAMES_SIGNATURE);
+		mv.visitFieldInsn(PUTFIELD, className, "names", BuilderConstants.NAMES_SIGNATURE);
 
 		// And return
 		mv.visitInsn(RETURN);
@@ -263,7 +234,7 @@ public class APIBuilder {
 	 * Create the main {@link org.squiddev.luaj.api.LuaObjectWrapper#invoke(Varargs, int)} method
 	 */
 	protected void writeInvoke() {
-		MethodVisitor mv = writer.visitMethod(ACC_PUBLIC, "invoke", INVOKE_SIGNATURE, null, null);
+		MethodVisitor mv = writer.visitMethod(ACC_PUBLIC, "invoke", BuilderConstants.INVOKE_SIGNATURE, null, null);
 		mv.visitCode();
 
 		// Get index
@@ -297,7 +268,7 @@ public class APIBuilder {
 			// If we should validate then assert how many values there are
 			if (needsValidation && iterator.requiredLength() > 0) {
 				mv.visitVarInsn(ALOAD, 1);
-				VARARGS_NARGS.inject(mv);
+				BuilderConstants.VARARGS_NARGS.inject(mv);
 				constantOpcode(mv, iterator.requiredLength());
 				mv.visitJumpInsn(IF_ICMPLT, doException);
 			}
@@ -314,7 +285,7 @@ public class APIBuilder {
 				if (validator.shouldValidate(type)) {
 					mv.visitVarInsn(ALOAD, 1);
 					constantOpcode(mv, index);
-					VARARGS_ARG.inject(mv);
+					BuilderConstants.VARARGS_ARG.inject(mv);
 					validator.addValidation(mv, type);
 
 					if (iterator.hasValidateNext()) {
@@ -333,7 +304,7 @@ public class APIBuilder {
 				// Do exception
 				mv.visitLabel(doException);
 				mv.visitFrame(F_SAME, 0, null, 0, null);
-				mv.visitTypeInsn(NEW, TYPE_LUAERROR);
+				mv.visitTypeInsn(NEW, BuilderConstants.TYPE_LUAERROR);
 				mv.visitInsn(DUP);
 
 				String error = method.errorMessage;
@@ -343,7 +314,7 @@ public class APIBuilder {
 					error = text;
 				}
 				mv.visitLdcInsn(error);
-				mv.visitMethodInsn(INVOKESPECIAL, TYPE_LUAERROR, "<init>", "(Ljava/lang/String;)V", false);
+				mv.visitMethodInsn(INVOKESPECIAL, BuilderConstants.TYPE_LUAERROR, "<init>", "(Ljava/lang/String;)V", false);
 				mv.visitInsn(ATHROW);
 
 				// Continue
@@ -367,11 +338,11 @@ public class APIBuilder {
 					// If we just have varargs then we should load it, if we have varargs later then use subargs
 					if (argCounter > 1) {
 						constantOpcode(mv, argCounter);
-						VARARGS_SUBARGS.inject(mv);
+						BuilderConstants.VARARGS_SUBARGS.inject(mv);
 					}
 				} else {
 					constantOpcode(mv, argCounter);
-					VARARGS_ARG.inject(mv);
+					BuilderConstants.VARARGS_ARG.inject(mv);
 
 					IInjector<LuaMethod> type = settings.converter.getFromLua(argType);
 					if (type == null) {
@@ -390,7 +361,7 @@ public class APIBuilder {
 			Class<?> returns = method.method.getReturnType();
 			if (returns.equals(Void.TYPE)) {
 				// If no result, return None
-				mv.visitFieldInsn(GETSTATIC, TYPE_LUAVALUE, "NONE", CLASS_LUAVALUE);
+				mv.visitFieldInsn(GETSTATIC, BuilderConstants.TYPE_LUAVALUE, "NONE", BuilderConstants.CLASS_LUAVALUE);
 			} else if (!Varargs.class.isAssignableFrom(returns)) { // Don't need to convert if returning a LuaValue
 
 				// If it isn't an array or if it is and the array type isn't a subclass of LuaValue
@@ -407,9 +378,9 @@ public class APIBuilder {
 				// If we return an array then try return a {@link LuaTable} or {@link Varargs}
 				if (returns.isArray()) {
 					if (method.returnsVarags) {
-						VARARGS_OF.inject(mv);
+						BuilderConstants.VARARGS_OF.inject(mv);
 					} else {
-						LIST_OF.inject(mv);
+						BuilderConstants.LIST_OF.inject(mv);
 					}
 				}
 			}
@@ -422,7 +393,7 @@ public class APIBuilder {
 		mv.visitLabel(defaultLabel);
 		mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
 		// return LuaValue.NONE;
-		mv.visitFieldInsn(GETSTATIC, TYPE_LUAVALUE, "NONE", CLASS_LUAVALUE);
+		mv.visitFieldInsn(GETSTATIC, BuilderConstants.TYPE_LUAVALUE, "NONE", BuilderConstants.CLASS_LUAVALUE);
 		mv.visitInsn(ARETURN);
 
 		mv.visitMaxs(0, 0);
@@ -431,50 +402,5 @@ public class APIBuilder {
 
 	public byte[] toByteArray() {
 		return writer.toByteArray();
-	}
-
-	/**
-	 * Exception thrown on generating classes
-	 */
-	public static class BuilderException extends RuntimeException {
-		public BuilderException(String message, Throwable cause) {
-			super(message, cause);
-		}
-
-		public BuilderException(String message) {
-			super(message, null);
-		}
-
-		public BuilderException(String message, LuaClass klass, Throwable cause) {
-			this(klass.klass.getName() + ": " + message, cause);
-		}
-
-		public BuilderException(String message, LuaClass klass) {
-			this(message, klass, null);
-		}
-
-		public BuilderException(String message, LuaMethod method, Throwable cause) {
-			this(method.method.getName() + ": " + message, method.klass, cause);
-		}
-
-		public BuilderException(String message, LuaMethod method) {
-			this(message, method, null);
-		}
-
-		public BuilderException(String message, LuaArgument argument, Throwable cause) {
-			this("Argument " + argument.parameter.getType() + ": " + message, argument.method, cause);
-		}
-
-		public BuilderException(String message, LuaArgument argument) {
-			this(message, argument, null);
-		}
-
-		public BuilderException(String message, LuaField field, Throwable cause) {
-			this(field.field.getName() + ": " + message, field.klass, cause);
-		}
-
-		public BuilderException(String message, LuaField field) {
-			this(message, field, null);
-		}
 	}
 }

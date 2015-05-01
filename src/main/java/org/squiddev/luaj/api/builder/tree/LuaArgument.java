@@ -1,7 +1,7 @@
 package org.squiddev.luaj.api.builder.tree;
 
 import org.luaj.vm2.Varargs;
-import org.squiddev.luaj.api.builder.APIBuilder;
+import org.squiddev.luaj.api.builder.BuilderException;
 import org.squiddev.luaj.api.builder.Parameter;
 import org.squiddev.luaj.api.validation.ILuaValidator;
 
@@ -58,7 +58,7 @@ public class LuaArgument {
 			try {
 				val = validator.newInstance();
 			} catch (ReflectiveOperationException e) {
-				throw new APIBuilder.BuilderException("Cannot create new instance of " + validator.getName(), this, e);
+				throw new BuilderException("Cannot create new instance of " + validator.getName(), this, e);
 			}
 
 			VALIDATORS.put(validator, val);

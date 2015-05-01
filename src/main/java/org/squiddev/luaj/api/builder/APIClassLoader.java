@@ -98,7 +98,7 @@ public class APIClassLoader<T extends LuaObject> extends ClassLoader {
 	 */
 	@SuppressWarnings("unchecked")
 	protected Class<? extends T> createClass(String name, Class<?> original) {
-		return (Class<? extends T>) defineClass(name, new APIBuilder(name, original, settings).toByteArray());
+		return (Class<? extends T>) defineClass(name, new ClassBuilder(name, original, settings).toByteArray());
 	}
 
 	/**
