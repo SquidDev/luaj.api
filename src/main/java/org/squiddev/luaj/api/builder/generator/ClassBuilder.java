@@ -56,16 +56,16 @@ public abstract class ClassBuilder {
 	/**
 	 * Create a new {@link ClassBuilder}
 	 *
-	 * @param name     The name of the generated class
-	 * @param klass    The class we build a wrapper around
-	 * @param settings Settings for various generation options
+	 * @param name  The name of the generated class
+	 * @param klass The class we build a wrapper around
 	 */
-	public ClassBuilder(String name, Class<?> klass, BuilderSettings settings) {
-		this.klass = new LuaClass(className = name.replace('.', '/'), klass, settings);
-		this.settings = settings;
+	public ClassBuilder(String name, LuaClass klass) {
+		this.klass = klass;
+		this.settings = klass.settings;
+		className = name;
 
-		originalName = Type.getInternalName(klass);
-		originalWhole = Type.getDescriptor(klass);
+		originalName = Type.getInternalName(klass.klass);
+		originalWhole = Type.getDescriptor(klass.klass);
 
 		writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
 

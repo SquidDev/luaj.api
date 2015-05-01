@@ -48,7 +48,7 @@ public class LuaArgument {
 		if (parameter.getType().equals(Varargs.class)) optional = true;
 
 		// Run transformers on this argument
-		if (method.klass.transformer != null) method.klass.transformer.transform(this);
+		if (method.klass.settings.transformer != null) method.klass.settings.transformer.transform(this);
 	}
 
 	public ILuaValidator getValidator() {

@@ -27,6 +27,6 @@ public class LuaField {
 		this.klass = klass;
 		this.field = field;
 
-		if (klass.transformer != null) klass.transformer.transform(this);
+		if (klass.settings.transformer != null) klass.settings.transformer.transform(this);
 	}
 }

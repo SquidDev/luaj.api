@@ -46,7 +46,7 @@ public class LuaClass {
 	/**
 	 * The transformer this class uses
 	 */
-	public final Transformer transformer;
+	public final BuilderSettings settings;
 
 	/**
 	 * The validator for this class
@@ -59,7 +59,8 @@ public class LuaClass {
 		this.validator = settings.validator;
 
 		// Run the transformer on this class
-		Transformer transformer = this.transformer = settings.transformer;
+		this.settings = settings;
+		Transformer transformer = settings.transformer;
 		if (transformer != null) transformer.transform(this);
 
 		// Gather methods

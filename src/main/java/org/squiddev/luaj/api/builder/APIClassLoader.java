@@ -4,6 +4,7 @@ import org.squiddev.luaj.api.LuaObject;
 import org.squiddev.luaj.api.LuaObjectWrapper;
 import org.squiddev.luaj.api.builder.generator.ClassBuilder;
 import org.squiddev.luaj.api.builder.generator.JoinedClassBuilder;
+import org.squiddev.luaj.api.builder.tree.LuaClass;
 import org.squiddev.luaj.api.utils.AsmUtils;
 
 import java.util.HashMap;
@@ -111,7 +112,10 @@ public class APIClassLoader<T extends LuaObject> extends ClassLoader {
 	 * @return The created class builder
 	 */
 	protected ClassBuilder createBuilder(String name, Class<?> original) {
-		return new JoinedClassBuilder(name, original, settings);
+		name = name.replace('.', '/');
+		LuaClass klass = new LuaClass(name, original, settings);
+
+		return new JoinedClassBuilder(name, klass);
 	}
 
 	/**

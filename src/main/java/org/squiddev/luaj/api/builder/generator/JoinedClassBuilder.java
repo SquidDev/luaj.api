@@ -3,7 +3,7 @@ package org.squiddev.luaj.api.builder.generator;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
-import org.squiddev.luaj.api.builder.BuilderSettings;
+import org.squiddev.luaj.api.builder.tree.LuaClass;
 import org.squiddev.luaj.api.builder.tree.LuaMethod;
 
 import static org.objectweb.asm.Opcodes.*;
@@ -15,8 +15,8 @@ import static org.squiddev.luaj.api.builder.BuilderConstants.*;
 public class JoinedClassBuilder extends ClassBuilder {
 	protected MethodVisitor invokeVisitor;
 
-	public JoinedClassBuilder(String name, Class<?> klass, BuilderSettings settings) {
-		super(name, klass, settings);
+	public JoinedClassBuilder(String name, LuaClass klass) {
+		super(name, klass);
 	}
 
 	@Override
