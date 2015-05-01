@@ -2,11 +2,9 @@ package org.squiddev.luaj.api.builder;
 
 import org.squiddev.luaj.api.LuaObject;
 import org.squiddev.luaj.api.LuaObjectWrapper;
-import org.squiddev.luaj.api.conversion.Converter;
-import org.squiddev.luaj.api.transformer.DefaultTransformers;
-import org.squiddev.luaj.api.transformer.Transformer;
 import org.squiddev.luaj.api.utils.AsmUtils;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -14,30 +12,10 @@ import java.util.WeakHashMap;
  * Handles loading and generating APIs
  */
 public class APIClassLoader<T extends LuaObject> extends ClassLoader {
-	/**
-	 * A string to suffix every class with
-	 */
-	protected String suffix = "_GenAPI";
-
-	/**
-	 * The class every generated API will inherit from
-	 */
-	public final Class<T> parentClass;
-
-	/**
-	 * Should verify sources
-	 */
-	protected boolean verify = false;
-
-	/**
-	 * The method lookup for conversions
-	 */
-	protected Converter converter = Converter.getDefault();
-
-	protected Transformer transformer = new DefaultTransformers();
+	protected BuilderSettings settings = new BuilderSettings();
 
 	public APIClassLoader(Class<T> parentClass) {
-		this.parentClass = parentClass;
+		settings.parentClass = parentClass;
 	}
 
 	/**
@@ -46,21 +24,16 @@ public class APIClassLoader<T extends LuaObject> extends ClassLoader {
 	protected final Map<Class<?>, Class<? extends T>> cache = new WeakHashMap<>();
 
 	/**
+	 * Cache for class names to bytes
+	 */
+	protected final Map<String, byte[]> byteCache = new HashMap<>();
+
+	/**
 	 * A cache for created instances instead
 	 *
 	 * @see #makeInstance(Object)
 	 */
 	protected final Map<Object, T> instanceCache = new WeakHashMap<>();
-
-	@Override
-	protected Class<?> findClass(String name) throws ClassNotFoundException {
-		if (name.endsWith(suffix)) {
-			// We want to remove the _GenAPI part of the string
-			return createClass(name, Class.forName(name.substring(0, name.length() - suffix.length())));
-		}
-
-		return super.findClass(name);
-	}
 
 	/**
 	 * Make a class based off a {@link org.squiddev.luaj.api.LuaAPI} class
@@ -73,10 +46,18 @@ public class APIClassLoader<T extends LuaObject> extends ClassLoader {
 	public Class<? extends T> makeClass(Class<?> rootClass) {
 		Class<? extends T> wrapper = cache.get(rootClass);
 		if (wrapper == null) {
-			wrapper = createClass(rootClass.getName() + suffix, rootClass);
+			wrapper = createClass(rootClass.getName() + settings.suffix, rootClass);
 			cache.put(rootClass, wrapper);
 		}
 		return wrapper;
+	}
+
+	@Override
+	protected Class<?> findClass(String name) throws ClassNotFoundException {
+		byte[] bytes = byteCache.get(name);
+		if (bytes != null) return defineClass(name, bytes);
+
+		return super.findClass(name);
 	}
 
 	/**
@@ -117,32 +98,19 @@ public class APIClassLoader<T extends LuaObject> extends ClassLoader {
 	 */
 	@SuppressWarnings("unchecked")
 	protected Class<? extends T> createClass(String name, Class<?> original) {
-		byte[] bytes = new APIBuilder(name, original, this).toByteArray();
-		if (verify) {
-			AsmUtils.validateClass(bytes);
-		}
-
-		return (Class<? extends T>) defineClass(name, bytes, 0, bytes.length);
+		return (Class<? extends T>) defineClass(name, new APIBuilder(name, original, settings).toByteArray());
 	}
 
 	/**
-	 * Get the type converter to use
+	 * Define a class and verify it before loading
 	 *
-	 * @return The current converter
-	 * @see #converter
+	 * @param name  The name of the class
+	 * @param bytes The bytes of the class to load
+	 * @return The generated class
 	 */
-	public Converter getConverter() {
-		return converter;
-	}
-
-	/**
-	 * Get the method transformer to use
-	 *
-	 * @return The transformer
-	 * @see #transformer
-	 */
-	public Transformer getTransformer() {
-		return transformer;
+	protected Class<?> defineClass(String name, byte[] bytes) {
+		if (settings.verify) AsmUtils.validateClass(bytes);
+		return defineClass(name, bytes, 0, bytes.length);
 	}
 
 	/**
@@ -151,7 +119,7 @@ public class APIClassLoader<T extends LuaObject> extends ClassLoader {
 	 * @param parentClass The parent class to create from
 	 * @param <T>         The parent class to create from. This should be filled in automatically by parentClass
 	 * @return The creates {@link APIClassLoader}
-	 * @see #parentClass
+	 * @see BuilderSettings#parentClass
 	 */
 	public static <T extends LuaObject> APIClassLoader<T> createLoader(Class<T> parentClass) {
 		return new APIClassLoader<>(parentClass);

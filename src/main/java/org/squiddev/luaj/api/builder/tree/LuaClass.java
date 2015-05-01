@@ -3,8 +3,8 @@ package org.squiddev.luaj.api.builder.tree;
 import org.squiddev.luaj.api.LuaAPI;
 import org.squiddev.luaj.api.LuaFunction;
 import org.squiddev.luaj.api.builder.APIBuilder;
+import org.squiddev.luaj.api.builder.BuilderSettings;
 import org.squiddev.luaj.api.transformer.Transformer;
-import org.squiddev.luaj.api.validation.DefaultLuaValidator;
 import org.squiddev.luaj.api.validation.ILuaValidator;
 
 import java.lang.reflect.Field;
@@ -51,14 +51,15 @@ public class LuaClass {
 	/**
 	 * The validator for this class
 	 */
-	public Class<? extends ILuaValidator> validator = DefaultLuaValidator.class;
+	public Class<? extends ILuaValidator> validator;
 
-	public LuaClass(String name, Class<?> klass, Transformer transformer) {
+	public LuaClass(String name, Class<?> klass, BuilderSettings settings) {
 		this.name = name;
 		this.klass = klass;
+		this.validator = settings.validator;
 
 		// Run the transformer on this class
-		this.transformer = transformer;
+		Transformer transformer = this.transformer = settings.transformer;
 		if (transformer != null) transformer.transform(this);
 
 		// Gather methods

@@ -9,7 +9,6 @@ import org.squiddev.luaj.api.builder.tree.LuaArgument;
 import org.squiddev.luaj.api.builder.tree.LuaClass;
 import org.squiddev.luaj.api.builder.tree.LuaField;
 import org.squiddev.luaj.api.builder.tree.LuaMethod;
-import org.squiddev.luaj.api.conversion.Converter;
 import org.squiddev.luaj.api.utils.TinyMethod;
 import org.squiddev.luaj.api.validation.ILuaValidator;
 
@@ -22,7 +21,7 @@ import static org.squiddev.luaj.api.utils.AsmUtils.constantOpcode;
  * Builds ASM code to call an API
  */
 public class APIBuilder {
-	// A CLASS_ Starts is the L...; fVrmat, a TYPE_ is not
+	// A CLASS_ Starts is the L...; a TYPE_ is not
 	public static final String CLASS_VARARGS = Type.getDescriptor(Varargs.class);
 	public static final String CLASS_LUAVALUE = Type.getDescriptor(LuaValue.class);
 	public static final String TYPE_LUAVALUE = Type.getInternalName(LuaValue.class);
@@ -73,18 +72,9 @@ public class APIBuilder {
 	public final String className;
 
 	/**
-	 * The name of the parent/super class for our generated wrapper
-	 *
-	 * @see APIClassLoader#parentClass
+	 * Settings for class generation
 	 */
-	public final Class<?> parent;
-
-	/**
-	 * Stores the conversion handler
-	 *
-	 * @see APIClassLoader#converter
-	 */
-	public final Converter converter;
+	public final BuilderSettings settings;
 
 	/**
 	 * Data about the class
@@ -94,19 +84,18 @@ public class APIBuilder {
 	/**
 	 * Create a new {@link APIBuilder}
 	 *
-	 * @param name   The name of the generated class
-	 * @param klass  The class we build a wrapper around
-	 * @param loader The class loader to load from. This stores settings about various generation options
+	 * @param name     The name of the generated class
+	 * @param klass    The class we build a wrapper around
+	 * @param settings Settings for various generation options
 	 */
-	public APIBuilder(String name, Class<?> klass, APIClassLoader loader) {
-		this.klass = new LuaClass(className = name.replace('.', '/'), klass, loader.transformer);
+	public APIBuilder(String name, Class<?> klass, BuilderSettings settings) {
+		this.klass = new LuaClass(className = name.replace('.', '/'), klass, settings);
+		this.settings = settings;
 
 		originalName = Type.getInternalName(klass);
 		originalWhole = Type.getDescriptor(klass);
 
 		writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
-		parent = loader.parentClass;
-		converter = loader.getConverter();
 
 		write();
 	}
@@ -116,7 +105,7 @@ public class APIBuilder {
 	 */
 	protected void write() {
 		// Declare class name
-		writer.visit(V1_6, ACC_PUBLIC + ACC_SUPER, className, null, Type.getInternalName(parent), null);
+		writer.visit(V1_6, ACC_PUBLIC + ACC_SUPER, className, null, Type.getInternalName(settings.parentClass), null);
 
 		// Declare METHOD_NAMES
 		writer.visitField(ACC_PRIVATE | ACC_FINAL | ACC_STATIC, METHOD_NAMES, METHOD_NAMES_SIGNATURE, null, null).visitEnd();
@@ -219,7 +208,7 @@ public class APIBuilder {
 		// Parent constructor with argument
 		mv.visitVarInsn(ALOAD, 0);
 		mv.visitVarInsn(ALOAD, 1);
-		mv.visitMethodInsn(INVOKESPECIAL, Type.getInternalName(parent), "<init>", "(Ljava/lang/Object;)V", false);
+		mv.visitMethodInsn(INVOKESPECIAL, Type.getInternalName(settings.parentClass), "<init>", "(Ljava/lang/Object;)V", false);
 
 		// Set method names
 		mv.visitVarInsn(ALOAD, 0);
@@ -250,7 +239,7 @@ public class APIBuilder {
 
 		// Parent setup
 		mv.visitVarInsn(ALOAD, 0);
-		mv.visitMethodInsn(INVOKESPECIAL, Type.getInternalName(parent), "setup", "()V", false);
+		mv.visitMethodInsn(INVOKESPECIAL, Type.getInternalName(settings.parentClass), "setup", "()V", false);
 
 		for (LuaField field : fields) {
 			field.setup.inject(mv, field);
@@ -384,7 +373,7 @@ public class APIBuilder {
 					constantOpcode(mv, argCounter);
 					VARARGS_ARG.inject(mv);
 
-					IInjector<LuaMethod> type = converter.getFromLua(argType);
+					IInjector<LuaMethod> type = settings.converter.getFromLua(argType);
 					if (type == null) {
 						throw new BuilderException("Cannot convert LuaValue to " + argType, method);
 					}
@@ -407,7 +396,7 @@ public class APIBuilder {
 				// If it isn't an array or if it is and the array type isn't a subclass of LuaValue
 				if (!returns.isArray() || !LuaValue.class.isAssignableFrom(returns.getComponentType())) {
 					// Check if we have a converter
-					IInjector<LuaMethod> type = converter.getToLua(returns);
+					IInjector<LuaMethod> type = settings.converter.getToLua(returns);
 					if (type == null) {
 						throw new BuilderException("Cannot convert " + returns.getName() + " to LuaValue for ", method);
 					}
