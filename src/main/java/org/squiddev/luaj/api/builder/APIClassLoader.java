@@ -2,6 +2,7 @@ package org.squiddev.luaj.api.builder;
 
 import org.squiddev.luaj.api.LuaObject;
 import org.squiddev.luaj.api.LuaObjectWrapper;
+import org.squiddev.luaj.api.builder.generator.ClassBuilder;
 import org.squiddev.luaj.api.utils.AsmUtils;
 
 import java.util.HashMap;
