@@ -46,7 +46,7 @@ public abstract class BuilderConstants {
 	public static final TinyMethod VARARGS_SUBARGS = new TinyMethod(Varargs.class, "subargs", int.class);
 	public static final TinyMethod VARARGS_OF = new TinyMethod(LuaValue.class, "varargsOf", LuaValue[].class);
 	public static final TinyMethod LIST_OF = new TinyMethod(LuaValue.class, "listOf", LuaValue[].class);
-	public static final TinyMethod TABLE_SET_STRING = new TinyMethod(LuaValue.class, "set", String.class, LuaValue.class);
+	public static final TinyMethod TABLE_SET_STRING = new TinyMethod(LuaValue.class, "rawset", String.class, LuaValue.class);
 
 	public static final TinyMethod API_MAKE_INSTANCE = new TinyMethod(APIClassLoader.class, "makeInstance", Object.class);
 	public static final TinyMethod API_GET_TABLE = new TinyMethod(LuaObject.class, "getTable");
