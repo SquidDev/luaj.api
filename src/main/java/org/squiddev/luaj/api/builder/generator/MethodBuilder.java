@@ -42,7 +42,7 @@ public abstract class MethodBuilder {
 	/**
 	 * Write the method
 	 */
-	public void visit() {
+	public void write() {
 		MethodVisitor mv = getInvokeVisitor();
 
 		// Validate the arguments

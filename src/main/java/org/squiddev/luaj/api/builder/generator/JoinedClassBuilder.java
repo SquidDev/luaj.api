@@ -51,7 +51,7 @@ public class JoinedClassBuilder extends ClassBuilder {
 			// Setup the jump for this method
 			mv.visitLabel(labels[counter]);
 			mv.visitFrame(F_SAME, 0, null, 0, null);
-			createBuilder(method).visit();
+			createBuilder(method).write();
 
 			counter++;
 		}
