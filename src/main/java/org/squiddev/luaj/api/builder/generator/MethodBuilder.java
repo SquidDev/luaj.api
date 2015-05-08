@@ -59,8 +59,7 @@ public abstract class MethodBuilder {
 
 		// Load the instance and validate its type
 		mv.visitVarInsn(ALOAD, 0);
-		mv.visitFieldInsn(GETFIELD, getClassName(), "instance", "Ljava/lang/Object;");
-		mv.visitTypeInsn(CHECKCAST, builder.originalName);
+		mv.visitFieldInsn(GETFIELD, getClassName(), INSTANCE, builder.originalWhole);
 
 		// Convert the arguments
 		writeArgumentConversions();

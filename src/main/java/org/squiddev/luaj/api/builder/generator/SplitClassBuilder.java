@@ -1,7 +1,6 @@
 package org.squiddev.luaj.api.builder.generator;
 
 import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Type;
 import org.squiddev.luaj.api.builder.tree.LuaClass;
 import org.squiddev.luaj.api.builder.tree.LuaMethod;
 
@@ -39,51 +38,50 @@ public class SplitClassBuilder extends ClassBuilder {
 
 		writer.visitField(ACC_PRIVATE | ACC_FINAL, METHODS, METHODS_SIGNATURE, null, null).visitEnd();
 
-		writer.visitField(ACC_PRIVATE | ACC_FINAL, "instance", originalWhole, null, null).visitEnd();
-
-		{
-			MethodVisitor getNames = writer.visitMethod(ACC_PUBLIC, "getNames", "()" + NAMES_SIGNATURE, null, null);
-			getNames.visitCode();
-			getNames.visitFieldInsn(GETSTATIC, className, NAMES, NAMES_SIGNATURE);
-			getNames.visitInsn(ARETURN);
-
-			getNames.visitMaxs(0, 0);
-			getNames.visitEnd();
-		}
-
 		super.write();
 	}
 
 	@Override
-	protected void writeInitFields(MethodVisitor mv) {
-	}
-
-	@Override
-	protected void writeSuperInit(MethodVisitor mv) {
-		mv.visitVarInsn(ALOAD, 0);
-		mv.visitMethodInsn(INVOKESPECIAL, Type.getInternalName(settings.parentClass), "<init>", "()V", false);
-	}
-
-	@Override
 	protected void writeInvoke() {
+		boolean hasMeta = false;
+
 		for (LuaMethod method : klass.methods) {
 			SplitMethodBuilder builder = createBuilder(method);
 			builder.write();
+
 			bytes.put(names.get(method), builder.getBytes());
+			for (String name : method.names) {
+				if (hasMeta || name.startsWith("__")) {
+					hasMeta = true;
+					break;
+				}
+			}
 		}
 
 		MethodVisitor visitor = CREATE_TABLE.create(writer);
+
 		visitor.visitTypeInsn(NEW, TYPE_LUATABLE);
 		visitor.visitInsn(DUP);
 		visitor.visitMethodInsn(INVOKESPECIAL, TYPE_LUATABLE, "<init>", "()V", false);
 		visitor.visitVarInsn(ASTORE, 1);
 
+		if (hasMeta) {
+			visitor.visitTypeInsn(NEW, TYPE_LUATABLE);
+			visitor.visitInsn(DUP);
+			visitor.visitMethodInsn(INVOKESPECIAL, TYPE_LUATABLE, "<init>", "()V", false);
+			visitor.visitVarInsn(ASTORE, 2);
+
+			visitor.visitVarInsn(ALOAD, 1);
+			visitor.visitVarInsn(ALOAD, 2);
+			visitor.visitMethodInsn(INVOKEVIRTUAL, TYPE_LUAVALUE, "setmetatable", "(" + CLASS_LUAVALUE + ")" + CLASS_LUAVALUE, false);
+			visitor.visitInsn(POP);
+		}
+
 		String signature = "(" + originalWhole + ")V";
 		for (LuaMethod method : klass.methods) {
 			String methodClassName = names.get(method);
 			for (String name : method.names) {
-				// Duplicate object
-				visitor.visitVarInsn(ALOAD, 1);
+				visitor.visitVarInsn(ALOAD, name.startsWith("__") ? 2 : 1);
 
 				visitor.visitLdcInsn(name);
 
@@ -91,7 +89,7 @@ public class SplitClassBuilder extends ClassBuilder {
 				visitor.visitInsn(DUP);
 
 				visitor.visitVarInsn(ALOAD, 0);
-				visitor.visitFieldInsn(GETFIELD, className, "instance", originalWhole);
+				visitor.visitFieldInsn(GETFIELD, className, INSTANCE, originalWhole);
 
 				visitor.visitMethodInsn(INVOKESPECIAL, methodClassName, "<init>", signature, false);
 

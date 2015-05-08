@@ -27,6 +27,7 @@ public abstract class BuilderConstants {
 
 	public static final String INVOKE_SIGNATURE = "(" + CLASS_VARARGS + "I)" + CLASS_VARARGS;
 
+	public static final String INSTANCE = "instance";
 	public static final String LOADER = "LOADER";
 
 	public static final String NAMES = "NAMES";

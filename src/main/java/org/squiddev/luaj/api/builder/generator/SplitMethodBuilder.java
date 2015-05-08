@@ -45,7 +45,7 @@ public abstract class SplitMethodBuilder extends MethodBuilder {
 		writer.visit(V1_6, ACC_PUBLIC + ACC_SUPER, name, null, invokeMethod.className, null);
 
 		// Declare instance
-		writer.visitField(ACC_PRIVATE | ACC_FINAL, "instance", builder.originalWhole, null, null).visitEnd();
+		writer.visitField(ACC_PRIVATE | ACC_FINAL, INSTANCE, builder.originalWhole, null, null).visitEnd();
 
 		// Constructor
 		{
@@ -57,7 +57,7 @@ public abstract class SplitMethodBuilder extends MethodBuilder {
 			// Set instance
 			init.visitVarInsn(ALOAD, 0);
 			init.visitVarInsn(ALOAD, 1);
-			init.visitFieldInsn(PUTFIELD, name, "instance", builder.originalWhole);
+			init.visitFieldInsn(PUTFIELD, name, INSTANCE, builder.originalWhole);
 
 			init.visitInsn(RETURN);
 			init.visitMaxs(0, 0);

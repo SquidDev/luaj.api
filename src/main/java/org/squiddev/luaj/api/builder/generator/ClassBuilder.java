@@ -80,16 +80,20 @@ public abstract class ClassBuilder {
 		writer.visit(V1_6, ACC_PUBLIC + ACC_SUPER, className, null, Type.getInternalName(settings.parentClass), null);
 
 		// Declare METHOD_NAMES
-		writer.visitField(ACC_PRIVATE | ACC_FINAL | ACC_STATIC, METHOD_NAMES, METHOD_NAMES_SIGNATURE, null, null).visitEnd();
+		writer.visitField(ACC_PUBLIC | ACC_FINAL | ACC_STATIC, METHOD_NAMES, METHOD_NAMES_SIGNATURE, null, null).visitEnd();
 
 		// Declare NAMES
-		writer.visitField(ACC_PRIVATE | ACC_FINAL | ACC_STATIC, NAMES, NAMES_SIGNATURE, null, null).visitEnd();
+		writer.visitField(ACC_PUBLIC | ACC_FINAL | ACC_STATIC, NAMES, NAMES_SIGNATURE, null, null).visitEnd();
 
 		// LOADER is setup in the class loader. This allows us to load other classes
-		writer.visitField(ACC_PRIVATE | ACC_FINAL | ACC_STATIC, LOADER, CLASS_LOADER, null, null).visitEnd();
+		writer.visitField(ACC_PUBLIC | ACC_FINAL | ACC_STATIC, LOADER, CLASS_LOADER, null, null).visitEnd();
+
+		writer.visitField(ACC_PRIVATE | ACC_FINAL, INSTANCE, originalWhole, null, null).visitEnd();
 
 		writeInit();
 		writeStaticInit();
+		writeGetters();
+
 		writeSetup();
 		writeInvoke();
 
@@ -178,8 +182,16 @@ public abstract class ClassBuilder {
 		MethodVisitor mv = writer.visitMethod(ACC_PUBLIC, "<init>", "(" + originalWhole + ")V", null, null);
 		mv.visitCode();
 
-		writeSuperInit(mv);
-		writeInitFields(mv);
+		// Static constructor
+		mv.visitVarInsn(ALOAD, 0);
+		mv.visitMethodInsn(INVOKESPECIAL, Type.getInternalName(settings.parentClass), "<init>", "()V", false);
+
+		// Setup instance class
+		mv.visitVarInsn(ALOAD, 0);
+		mv.visitVarInsn(ALOAD, 1);
+		mv.visitFieldInsn(PUTFIELD, className, INSTANCE, originalWhole);
+
+		writeInitBody(mv);
 
 		// And return
 		mv.visitInsn(RETURN);
@@ -188,30 +200,41 @@ public abstract class ClassBuilder {
 	}
 
 	/**
-	 * Call the parent constructor
-	 * @param mv The method visitor
-	 */
-	protected void writeSuperInit(MethodVisitor mv) {
-		mv.visitVarInsn(ALOAD, 0);
-		mv.visitVarInsn(ALOAD, 1);
-		mv.visitMethodInsn(INVOKESPECIAL, Type.getInternalName(settings.parentClass), "<init>", "(Ljava/lang/Object;)V", false);
-	}
-
-	/**
 	 * Write the fields to set in a
 	 *
 	 * @param mv The constructor's method visitor
 	 */
-	protected void writeInitFields(MethodVisitor mv) {
-		// Set method names
-		mv.visitVarInsn(ALOAD, 0);
-		mv.visitFieldInsn(GETSTATIC, className, METHOD_NAMES, METHOD_NAMES_SIGNATURE);
-		mv.visitFieldInsn(PUTFIELD, className, "methodNames", METHOD_NAMES_SIGNATURE);
+	protected void writeInitBody(MethodVisitor mv) {
+	}
 
-		// Set method API names
-		mv.visitVarInsn(ALOAD, 0);
-		mv.visitFieldInsn(GETSTATIC, className, NAMES, NAMES_SIGNATURE);
-		mv.visitFieldInsn(PUTFIELD, className, "names", NAMES_SIGNATURE);
+	/**
+	 * Write getters for this class
+	 *
+	 * @see LuaObject#getNames()
+	 * @see LuaObject#getMethodNames()
+	 */
+	protected void writeGetters() {
+		{
+			MethodVisitor mv = writer.visitMethod(ACC_PUBLIC, "getNames", "()" + NAMES_SIGNATURE, null, null);
+			mv.visitCode();
+
+			mv.visitFieldInsn(GETSTATIC, className, NAMES, NAMES_SIGNATURE);
+			mv.visitInsn(ARETURN);
+
+			mv.visitMaxs(1, 0);
+			mv.visitEnd();
+		}
+
+		{
+			MethodVisitor mv = writer.visitMethod(ACC_PUBLIC, "getMethodNames", "()" + METHOD_NAMES_SIGNATURE, null, null);
+			mv.visitCode();
+
+			mv.visitFieldInsn(GETSTATIC, className, METHOD_NAMES, METHOD_NAMES_SIGNATURE);
+			mv.visitInsn(ARETURN);
+
+			mv.visitMaxs(1, 0);
+			mv.visitEnd();
+		}
 	}
 
 	/**
@@ -234,7 +257,7 @@ public abstract class ClassBuilder {
 
 			// Load instance
 			mv.visitVarInsn(ALOAD, 0);
-			mv.visitFieldInsn(GETFIELD, className, "instance", "Ljava/lang/Object;");
+			mv.visitFieldInsn(GETFIELD, className, INSTANCE, originalWhole);
 			mv.visitTypeInsn(CHECKCAST, originalName);
 			mv.visitInsn(SWAP);
 			mv.visitFieldInsn(PUTFIELD, originalName, field.field.getName(), Type.getDescriptor(field.field.getType()));
