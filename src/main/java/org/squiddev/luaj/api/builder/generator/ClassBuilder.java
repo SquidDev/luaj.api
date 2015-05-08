@@ -178,17 +178,23 @@ public abstract class ClassBuilder {
 		MethodVisitor mv = writer.visitMethod(ACC_PUBLIC, "<init>", "(" + originalWhole + ")V", null, null);
 		mv.visitCode();
 
-		// Parent constructor with argument
-		mv.visitVarInsn(ALOAD, 0);
-		mv.visitVarInsn(ALOAD, 1);
-		mv.visitMethodInsn(INVOKESPECIAL, Type.getInternalName(settings.parentClass), "<init>", "(Ljava/lang/Object;)V", false);
-
+		writeSuperInit(mv);
 		writeInitFields(mv);
 
 		// And return
 		mv.visitInsn(RETURN);
 		mv.visitMaxs(0, 0);
 		mv.visitEnd();
+	}
+
+	/**
+	 * Call the parent constructor
+	 * @param mv The method visitor
+	 */
+	protected void writeSuperInit(MethodVisitor mv) {
+		mv.visitVarInsn(ALOAD, 0);
+		mv.visitVarInsn(ALOAD, 1);
+		mv.visitMethodInsn(INVOKESPECIAL, Type.getInternalName(settings.parentClass), "<init>", "(Ljava/lang/Object;)V", false);
 	}
 
 	/**

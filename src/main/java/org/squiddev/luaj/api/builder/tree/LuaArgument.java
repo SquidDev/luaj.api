@@ -66,4 +66,13 @@ public class LuaArgument {
 
 		return val;
 	}
+
+	public boolean isVarargs() {
+		return parameter.getType().equals(Varargs.class);
+	}
+
+	@Override
+	public String toString() {
+		return "LuaArgument<" + parameter.getType() + ">";
+	}
 }

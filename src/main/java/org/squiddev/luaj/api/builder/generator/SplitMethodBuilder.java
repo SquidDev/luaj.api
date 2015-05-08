@@ -6,6 +6,7 @@ import org.luaj.vm2.lib.*;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
+import org.squiddev.luaj.api.builder.BuilderException;
 import org.squiddev.luaj.api.builder.tree.LuaMethod;
 import org.squiddev.luaj.api.utils.TinyMethod;
 
@@ -44,16 +45,23 @@ public abstract class SplitMethodBuilder extends MethodBuilder {
 		writer.visit(V1_6, ACC_PUBLIC + ACC_SUPER, name, null, invokeMethod.className, null);
 
 		// Declare instance
-		writer.visitField(ACC_PRIVATE | ACC_FINAL, "instance", builder.originalName, null, null).visitEnd();
+		writer.visitField(ACC_PRIVATE | ACC_FINAL, "instance", builder.originalWhole, null, null).visitEnd();
 
 		// Constructor
 		{
 			MethodVisitor init = writer.visitMethod(ACC_PUBLIC, "<init>", "(" + builder.originalWhole + ")V", null, null);
 			init.visitCode();
+			// Init parent
+			init.visitVarInsn(ALOAD, 0);
 			init.visitMethodInsn(INVOKESPECIAL, invokeMethod.className, "<init>", "()V", false);
+			// Set instance
 			init.visitVarInsn(ALOAD, 0);
 			init.visitVarInsn(ALOAD, 1);
-			init.visitFieldInsn(PUTFIELD, name, "instance", builder.originalName);
+			init.visitFieldInsn(PUTFIELD, name, "instance", builder.originalWhole);
+
+			init.visitInsn(RETURN);
+			init.visitMaxs(0, 0);
+			init.visitEnd();
 		}
 
 		{
@@ -81,6 +89,11 @@ public abstract class SplitMethodBuilder extends MethodBuilder {
 		return mv;
 	}
 
+	@Override
+	protected String getClassName() {
+		return name;
+	}
+
 	public static class FiniteArgBuilder extends SplitMethodBuilder {
 		protected static final TinyMethod[] ARG_LENGTHS = new TinyMethod[]{
 			new TinyMethod(OneArgFunction.class, "call", LuaValue.class),
@@ -93,7 +106,7 @@ public abstract class SplitMethodBuilder extends MethodBuilder {
 		}
 
 		public FiniteArgBuilder(LuaMethod method, ClassBuilder builder, String name) {
-			super(method, builder, name, ARG_LENGTHS[method.validationIterator().requiredLength() - 1]);
+			super(method, builder, name, ARG_LENGTHS[method.arguments.length - 1]);
 		}
 
 		@Override
@@ -107,7 +120,7 @@ public abstract class SplitMethodBuilder extends MethodBuilder {
 
 		@Override
 		protected void loadVarArg(int offset) {
-			throw new IllegalStateException();
+			throw new BuilderException("Cannot load vararg for finite arg function", method);
 		}
 	}
 
@@ -120,7 +133,7 @@ public abstract class SplitMethodBuilder extends MethodBuilder {
 
 		@Override
 		protected void loadArgument(int arg) {
-			throw new IllegalStateException();
+			throw new BuilderException("Cannot load argument for 0 arg function", method);
 		}
 	}
 

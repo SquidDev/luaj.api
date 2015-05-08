@@ -17,6 +17,7 @@ public abstract class BuilderConstants {
 	// A CLASS_ Starts is the L...; a TYPE_ is not
 	public static final String CLASS_VARARGS = Type.getDescriptor(Varargs.class);
 	public static final String CLASS_LUAVALUE = Type.getDescriptor(LuaValue.class);
+	public static final String CLASS_LUATABLE = Type.getDescriptor(LuaTable.class);
 	public static final String TYPE_LUAVALUE = Type.getInternalName(LuaValue.class);
 	public static final String TYPE_LUATABLE = Type.getInternalName(LuaTable.class);
 	public static final String TYPE_LUAERROR = Type.getInternalName(LuaError.class);
@@ -37,7 +38,7 @@ public abstract class BuilderConstants {
 	public static final String METHODS = "methods";
 	public static final String METHODS_SIGNATURE = "[" + CLASS_LUAVALUE;
 
-	public static final TinyMethod CREATE_TABLE = new TinyMethod(LuaObject.class, "createTable", "()V", ACC_PROTECTED);
+	public static final TinyMethod CREATE_TABLE = new TinyMethod(LuaObject.class, "createTable", "()" + CLASS_LUATABLE, ACC_PROTECTED);
 
 	public static final TinyMethod VARARGS_NARGS = new TinyMethod(Varargs.class, "narg");
 	public static final TinyMethod VARARGS_ARG = new TinyMethod(Varargs.class, "arg", int.class);

@@ -1,7 +1,8 @@
 package org.squiddev.luaj.api;
 
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.luaj.vm2.LuaNumber;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
@@ -14,15 +15,20 @@ import static org.squiddev.luaj.api.LuaConversion.convert;
 /**
  * Tests functions are called correctly
  */
+@RunWith(Parameterized.class)
 public class ReturnValues {
-	private static APIClassLoader loader;
-	private static LuaTable table;
+	private LuaTable table;
+	private APIClassLoader loader;
 
-	@BeforeClass
-	public static void testCreateAPI() throws Exception {
-		loader = APIClassLoader.createLoader();
+	public ReturnValues(APIClassLoader loader) {
+		this.loader = loader;
 		LuaObject api = loader.makeInstance(new EmbedClass());
 		table = api.getTable();
+	}
+
+	@Parameterized.Parameters(name = "{0}")
+	public static Object[] getLoaders() {
+		return Loaders.getLoaderArgs();
 	}
 
 	/**
@@ -120,7 +126,7 @@ public class ReturnValues {
 	}
 
 	@LuaAPI
-	public static class EmbedClass {
+	public class EmbedClass {
 		@LuaFunction
 		public void noArgsNoReturn() {
 		}

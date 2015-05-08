@@ -1,7 +1,8 @@
 package org.squiddev.luaj.api;
 
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
@@ -13,16 +14,19 @@ import static org.squiddev.luaj.api.LuaConversion.convert;
 /**
  * Check metamethods are implemented
  */
+@RunWith(Parameterized.class)
 public class MetaMethods {
-	private static LuaTable table;
+	private LuaTable table;
 
-	@BeforeClass
-	public static void testCreateAPI() throws Exception {
-		LuaObject api = APIClassLoader.createLoader().makeInstance(new EmbedClass());
-		table = api.getTable();
+	public MetaMethods(APIClassLoader loader) {
+		table = loader.makeInstance(new EmbedClass()).getTable();
 	}
 
-	@Test
+	@Parameterized.Parameters(name = "{0}")
+	public static Object[] getLoaders() {
+		return Loaders.getLoaderArgs();
+	}
+
 	public void testsNormalFunctions() {
 		assertEquals(1, table.get("foo").invoke(convert(1)).toint(1));
 	}
@@ -34,7 +38,7 @@ public class MetaMethods {
 		);
 	}
 
-	private static class SetValue implements Runnable {
+	private class SetValue implements Runnable {
 		public final LuaValue name;
 		public final LuaValue value;
 

@@ -60,6 +60,9 @@ public class APIClassLoader<T extends LuaObject> extends ClassLoader {
 		byte[] bytes = byteCache.get(name);
 		if (bytes != null) return defineClass(name, bytes);
 
+		bytes = byteCache.get(name.replace('.', '/'));
+		if (bytes != null) return defineClass(name, bytes);
+
 		return super.findClass(name);
 	}
 
@@ -126,7 +129,7 @@ public class APIClassLoader<T extends LuaObject> extends ClassLoader {
 	 * @return The generated class
 	 */
 	protected Class<?> defineClass(String name, byte[] bytes) {
-		if (settings.verify) AsmUtils.validateClass(bytes);
+		if (settings.verify) AsmUtils.validateClass(bytes, this);
 		return defineClass(name, bytes, 0, bytes.length);
 	}
 

@@ -67,12 +67,13 @@ public class AsmUtils {
 		Exception error = null;
 		try {
 			CheckClassAdapter.verify(reader, loader, false, printWriter);
+		} catch (BuilderException e) {
+			throw e;
 		} catch (Exception e) {
 			error = e;
 		}
 
-		String contents = writer.toString();
-		if (error != null || contents.length() > 0) {
+		if (error != null || writer.toString().length() > 0) {
 			reader.accept(new TraceClassVisitor(printWriter), 0);
 			throw new BuilderException("Generation error\nDump for " + reader.getClassName() + "\n" + writer, error);
 		}

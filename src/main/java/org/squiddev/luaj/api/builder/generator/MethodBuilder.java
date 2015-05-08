@@ -40,6 +40,15 @@ public abstract class MethodBuilder {
 	protected abstract MethodVisitor getInvokeVisitor();
 
 	/**
+	 * Get the current class name
+	 *
+	 * @return The name of the current class
+	 */
+	protected String getClassName() {
+		return builder.className;
+	}
+
+	/**
 	 * Write the method
 	 */
 	public void write() {
@@ -50,7 +59,7 @@ public abstract class MethodBuilder {
 
 		// Load the instance and validate its type
 		mv.visitVarInsn(ALOAD, 0);
-		mv.visitFieldInsn(GETFIELD, builder.className, "instance", "Ljava/lang/Object;");
+		mv.visitFieldInsn(GETFIELD, getClassName(), "instance", "Ljava/lang/Object;");
 		mv.visitTypeInsn(CHECKCAST, builder.originalName);
 
 		// Convert the arguments
