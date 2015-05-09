@@ -1,5 +1,14 @@
 language: java
 jdk:
-  - oraclejdk8
+- oraclejdk8
 notifications:
   email: false
+deploy:
+  provider: releases
+  api_key:
+    secure: kFB57VuImSKZDV2AMTyBRUgDbYiPD6ydVHpl6dswxB3oJBY9SbFK519TOuMVzgeHFTZI22qZO/wIbM63zPvh/tw7gvWJu69MfU/5vsfcJMH9EOm2i1eTSCKkfl5/m71piBH/Ghyo7lmzZ8ypSIhRH0MQxX31lT8SRbZ4aFasfSw=
+  file: build/libs/luaj.api.*.jar
+  skip_cleanup: true
+  on:
+    repo: SquidDev/luaj.api
+    tags: true

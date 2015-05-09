@@ -27,9 +27,10 @@ public abstract class SplitMethodBuilder extends MethodBuilder {
 	/**
 	 * Create a MethodBuilder
 	 *
-	 * @param method  The method we are writing
-	 * @param builder The settings for the builder
-	 * @param name    The name of the generated class
+	 * @param method       The method we are writing
+	 * @param builder      The settings for the builder
+	 * @param name         The name of the generated class
+	 * @param invokeMethod The method that will overwritten for invoke
 	 */
 	public SplitMethodBuilder(LuaMethod method, ClassBuilder builder, String name, TinyMethod invokeMethod) {
 		super(method, builder);
