@@ -10,27 +10,6 @@ import org.luaj.vm2.lib.VarArgFunction;
  */
 public abstract class LuaObjectWrapper extends LuaObject {
 	/**
-	 * The instance that this class is bound to
-	 */
-	public final Object instance;
-
-	public LuaObjectWrapper(Object inst) {
-		instance = inst;
-	}
-
-	protected String[][] methodNames = null;
-	protected String[] names = null;
-
-	/**
-	 * Get the names of globals this API should be bound to.
-	 *
-	 * @return An array of name to bind to. Return null or an empty array to not set globals
-	 */
-	public String[] getNames() {
-		return names;
-	}
-
-	/**
 	 * Call a particular function with arguments
 	 *
 	 * @param args  The arguments to call the function with
@@ -46,6 +25,8 @@ public abstract class LuaObjectWrapper extends LuaObject {
 	 * @see #getTable()
 	 */
 	protected LuaTable createTable() {
+		String[][] methodNames = getMethodNames();
+		
 		LuaTable table = new LuaTable();
 		LuaTable meta = null;
 		try {

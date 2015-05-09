@@ -2,7 +2,7 @@ package org.squiddev.luaj.api.builder.tree;
 
 import org.squiddev.luaj.api.LuaAPI;
 import org.squiddev.luaj.api.LuaFunction;
-import org.squiddev.luaj.api.builder.APIBuilder;
+import org.squiddev.luaj.api.builder.BuilderException;
 import org.squiddev.luaj.api.builder.BuilderSettings;
 import org.squiddev.luaj.api.transformer.Transformer;
 import org.squiddev.luaj.api.validation.ILuaValidator;
@@ -46,7 +46,7 @@ public class LuaClass {
 	/**
 	 * The transformer this class uses
 	 */
-	public final Transformer transformer;
+	public final BuilderSettings settings;
 
 	/**
 	 * The validator for this class
@@ -59,7 +59,8 @@ public class LuaClass {
 		this.validator = settings.validator;
 
 		// Run the transformer on this class
-		Transformer transformer = this.transformer = settings.transformer;
+		this.settings = settings;
+		Transformer transformer = settings.transformer;
 		if (transformer != null) transformer.transform(this);
 
 		// Gather methods
@@ -70,7 +71,7 @@ public class LuaClass {
 			}
 		}
 
-		if (methods.size() == 0) throw new APIBuilder.BuilderException("No @LuaFunction methods", this);
+		if (methods.size() == 0) throw new BuilderException("No @LuaFunction methods", this);
 
 		Set<LuaField> fields = this.fields;
 		for (Field field : klass.getFields()) {

@@ -21,6 +21,13 @@ public abstract class LuaObject {
 	public abstract String[] getNames();
 
 	/**
+	 * Get the names of the method
+	 *
+	 * @return An array of array of names. Each item in the array is the list of names for that method.
+	 */
+	public abstract String[][] getMethodNames();
+
+	/**
 	 * Create the API's function table
 	 *
 	 * @return The created table

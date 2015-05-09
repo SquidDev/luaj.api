@@ -2,9 +2,9 @@ package org.squiddev.luaj.api.utils;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Type;
 import org.objectweb.asm.util.CheckClassAdapter;
 import org.objectweb.asm.util.TraceClassVisitor;
+import org.squiddev.luaj.api.builder.BuilderException;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -54,22 +54,6 @@ public class AsmUtils {
 	}
 
 	/**
-	 * Get the method signature
-	 *
-	 * @param classObj   The class to find it from
-	 * @param methodName The method name
-	 * @param args       Argument types
-	 * @return The method signature or {@code null} or failure
-	 */
-	public static String getMethodDecriptor(Class<?> classObj, String methodName, Class<?>... args) {
-		try {
-			return Type.getMethodDescriptor(classObj.getMethod(methodName, args));
-		} catch (NoSuchMethodException e) {
-			return null;
-		}
-	}
-
-	/**
 	 * Validate a generated class
 	 *
 	 * @param reader The class to read
@@ -83,14 +67,15 @@ public class AsmUtils {
 		Exception error = null;
 		try {
 			CheckClassAdapter.verify(reader, loader, false, printWriter);
+		} catch (BuilderException e) {
+			throw e;
 		} catch (Exception e) {
 			error = e;
 		}
 
-		String contents = writer.toString();
-		if (error != null || contents.length() > 0) {
+		if (error != null || writer.toString().length() > 0) {
 			reader.accept(new TraceClassVisitor(printWriter), 0);
-			throw new RuntimeException("Generation error\nDump for " + reader.getClassName() + "\n" + writer, error);
+			throw new BuilderException("Generation error\nDump for " + reader.getClassName() + "\n" + writer, error);
 		}
 	}
 

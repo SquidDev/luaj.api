@@ -1,7 +1,7 @@
 package org.squiddev.luaj.api.builder.tree;
 
 import org.squiddev.luaj.api.LuaFunction;
-import org.squiddev.luaj.api.builder.APIBuilder;
+import org.squiddev.luaj.api.builder.BuilderException;
 import org.squiddev.luaj.api.builder.Parameter;
 import org.squiddev.luaj.api.validation.ILuaValidator;
 
@@ -75,7 +75,7 @@ public class LuaMethod implements Iterable<LuaArgument> {
 		}
 
 		// Run transformers on this method
-		if (klass.transformer != null) klass.transformer.transform(this);
+		if (klass.settings.transformer != null) klass.settings.transformer.transform(this);
 
 		// Check if this function is a varargs function
 		Parameter[] params = Parameter.getParameters(method);
@@ -118,7 +118,7 @@ public class LuaMethod implements Iterable<LuaArgument> {
 				if (argument.optional) {
 					hasOptional = true;
 				} else if (hasOptional) {
-					throw new APIBuilder.BuilderException("Non-Optional item after an optional one", LuaMethod.this);
+					throw new BuilderException("Non-Optional item after an optional one", LuaMethod.this);
 				} else {
 					length++;
 				}
@@ -148,13 +148,6 @@ public class LuaMethod implements Iterable<LuaArgument> {
 		 */
 		public int requiredLength() {
 			return length;
-		}
-
-		/**
-		 * Reset back to the beginning
-		 */
-		public void rewind() {
-			index = 0;
 		}
 
 		@Override

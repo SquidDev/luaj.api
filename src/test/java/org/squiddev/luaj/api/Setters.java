@@ -1,11 +1,12 @@
 package org.squiddev.luaj.api;
 
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.Varargs;
-import org.squiddev.luaj.api.builder.APIBuilder;
 import org.squiddev.luaj.api.builder.APIClassLoader;
+import org.squiddev.luaj.api.builder.BuilderException;
 import org.squiddev.luaj.api.setters.LoaderSetter;
 import org.squiddev.luaj.api.setters.Setter;
 import org.squiddev.luaj.api.setters.TableSetter;
@@ -15,17 +16,22 @@ import static org.junit.Assert.assertEquals;
 /**
  * Tests setters work correctly
  */
+@RunWith(Parameterized.class)
 public class Setters {
-	private static APIClassLoader loader;
-	private static EmbedClass object;
-	private static LuaTable table;
+	private APIClassLoader loader;
+	private EmbedClass object;
+	private LuaTable table;
 
-	@BeforeClass
-	public static void testCreateAPI() throws Exception {
-		loader = APIClassLoader.createLoader();
+	public Setters(APIClassLoader loader) {
+		this.loader = loader;
 		object = new EmbedClass();
 		LuaObject api = loader.makeInstance(object);
 		table = api.getTable();
+	}
+
+	@Parameterized.Parameters(name = "{0}")
+	public static Object[] getLoaders() {
+		return Loaders.getLoaderArgs();
 	}
 
 	@Test
@@ -40,7 +46,7 @@ public class Setters {
 
 	@Test
 	public void validatesLoader() {
-		ExpectException.expect(APIBuilder.BuilderException.class, "Cannot convert java.lang.String to APIClassLoader", true, new Runnable() {
+		ExpectException.expect(BuilderException.class, "Cannot convert java.lang.String to APIClassLoader", true, new Runnable() {
 			@Override
 			public void run() {
 				loader.makeInstance(new EmbedClass() {
@@ -50,7 +56,7 @@ public class Setters {
 			}
 		});
 
-		ExpectException.expect(APIBuilder.BuilderException.class, "Cannot convert java.lang.String to LuaTable", true, new Runnable() {
+		ExpectException.expect(BuilderException.class, "Cannot convert java.lang.String to LuaTable", true, new Runnable() {
 			@Override
 			public void run() {
 				loader.makeInstance(new EmbedClass() {

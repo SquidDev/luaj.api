@@ -2,6 +2,9 @@ package org.squiddev.luaj.api.builder;
 
 import org.squiddev.luaj.api.LuaObject;
 import org.squiddev.luaj.api.LuaObjectWrapper;
+import org.squiddev.luaj.api.builder.generator.ClassBuilder;
+import org.squiddev.luaj.api.builder.generator.JoinedClassBuilder;
+import org.squiddev.luaj.api.builder.tree.LuaClass;
 import org.squiddev.luaj.api.utils.AsmUtils;
 
 import java.util.HashMap;
@@ -26,7 +29,7 @@ public class APIClassLoader<T extends LuaObject> extends ClassLoader {
 	/**
 	 * Cache for class names to bytes
 	 */
-	protected final Map<String, byte[]> byteCache = new HashMap<>();
+	protected Map<String, byte[]> byteCache = new HashMap<>();
 
 	/**
 	 * A cache for created instances instead
@@ -55,6 +58,9 @@ public class APIClassLoader<T extends LuaObject> extends ClassLoader {
 	@Override
 	protected Class<?> findClass(String name) throws ClassNotFoundException {
 		byte[] bytes = byteCache.get(name);
+		if (bytes != null) return defineClass(name, bytes);
+
+		bytes = byteCache.get(name.replace('.', '/'));
 		if (bytes != null) return defineClass(name, bytes);
 
 		return super.findClass(name);
@@ -98,7 +104,21 @@ public class APIClassLoader<T extends LuaObject> extends ClassLoader {
 	 */
 	@SuppressWarnings("unchecked")
 	protected Class<? extends T> createClass(String name, Class<?> original) {
-		return (Class<? extends T>) defineClass(name, new APIBuilder(name, original, settings).toByteArray());
+		return (Class<? extends T>) defineClass(name, createBuilder(name, original).writeClasses(byteCache));
+	}
+
+	/**
+	 * Create a builder for this class
+	 *
+	 * @param name     Name of the class to load
+	 * @param original The original class we are using
+	 * @return The created class builder
+	 */
+	protected ClassBuilder createBuilder(String name, Class<?> original) {
+		name = name.replace('.', '/');
+		LuaClass klass = new LuaClass(name, original, settings);
+
+		return new JoinedClassBuilder(name, klass);
 	}
 
 	/**
@@ -109,7 +129,7 @@ public class APIClassLoader<T extends LuaObject> extends ClassLoader {
 	 * @return The generated class
 	 */
 	protected Class<?> defineClass(String name, byte[] bytes) {
-		if (settings.verify) AsmUtils.validateClass(bytes);
+		if (settings.verify) AsmUtils.validateClass(bytes, this);
 		return defineClass(name, bytes, 0, bytes.length);
 	}
 

@@ -1,7 +1,7 @@
 package org.squiddev.luaj.api.builder.tree;
 
 import org.luaj.vm2.Varargs;
-import org.squiddev.luaj.api.builder.APIBuilder;
+import org.squiddev.luaj.api.builder.BuilderException;
 import org.squiddev.luaj.api.builder.Parameter;
 import org.squiddev.luaj.api.validation.ILuaValidator;
 
@@ -48,7 +48,7 @@ public class LuaArgument {
 		if (parameter.getType().equals(Varargs.class)) optional = true;
 
 		// Run transformers on this argument
-		if (method.klass.transformer != null) method.klass.transformer.transform(this);
+		if (method.klass.settings.transformer != null) method.klass.settings.transformer.transform(this);
 	}
 
 	public ILuaValidator getValidator() {
@@ -58,12 +58,21 @@ public class LuaArgument {
 			try {
 				val = validator.newInstance();
 			} catch (ReflectiveOperationException e) {
-				throw new APIBuilder.BuilderException("Cannot create new instance of " + validator.getName(), this, e);
+				throw new BuilderException("Cannot create new instance of " + validator.getName(), this, e);
 			}
 
 			VALIDATORS.put(validator, val);
 		}
 
 		return val;
+	}
+
+	public boolean isVarargs() {
+		return parameter.getType().equals(Varargs.class);
+	}
+
+	@Override
+	public String toString() {
+		return "LuaArgument<" + parameter.getType() + ">";
 	}
 }

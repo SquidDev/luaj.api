@@ -16,7 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.objectweb.asm.Opcodes.*;
-import static org.squiddev.luaj.api.builder.APIBuilder.*;
+import static org.squiddev.luaj.api.builder.BuilderConstants.*;
 
 /**
  * A registry for managing conversions

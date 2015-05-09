@@ -6,7 +6,7 @@ import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.Varargs;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
-import org.squiddev.luaj.api.builder.APIBuilder;
+import org.squiddev.luaj.api.builder.BuilderException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -39,7 +39,7 @@ public class DefaultLuaValidator implements ILuaValidator {
 			return true;
 		}
 
-		throw new APIBuilder.BuilderException("Cannot validate " + type.getName());
+		throw new BuilderException("Cannot validate " + type.getName());
 	}
 
 	/**
@@ -63,7 +63,7 @@ public class DefaultLuaValidator implements ILuaValidator {
 		} else if (LuaValue.class.isAssignableFrom(type)) {
 			mv.visitTypeInsn(INSTANCEOF, Type.getInternalName(type));
 		} else {
-			throw new APIBuilder.BuilderException("Cannot validate " + type.getName());
+			throw new BuilderException("Cannot validate " + type.getName());
 		}
 	}
 
