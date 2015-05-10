@@ -4,9 +4,7 @@ public class Deploy {
 	Project project
 
 	boolean shouldDeploy() {
-		return (
-			getUser() != null && git(["symbolic-ref", "--short", "-q", "HEAD"]) == "master"
-		);
+		return getUser() != null
 	}
 
 	String getUser() {
@@ -23,20 +21,34 @@ public class Deploy {
 
 	/**
 	 * If there is a tag then use that, else get the current branch
-	 * @return The
+	 * @return The version to use
 	 */
 	String toString() {
-		def version = git(["tag", "-l", "--contains", "HEAD"])
-		return version != "" ? version.replace('v', '') : git(["symbolic-ref", "--short", "-q", "HEAD"]) + "-SNAPSHOT"
+		String version = System.getenv("TRAVIS_TAG")
+		if (version != null && version != "") return version.replace("v", "")
+
+		version = System.getenv("TRAVIS_BRANCH")
+		if (version != null && version != "") return version + "-SNAPSHOT"
+
+		version = git(["symbolic-ref", "--short", "-q", "HEAD"])
+		if (version != null && version != "") return version + "-SNAPSHOT"
+
+		return "unknown-SNAPSHOT"
 	}
 
-	def git(List gitArgs) {
+	/**
+	 * Execute a git command
+	 * @param gitArgs Arguments to run
+	 * @return StdOut
+	 */
+	String git(List gitArgs) {
 		def stdout = new ByteArrayOutputStream()
 
 		project.exec {
 			executable = 'git'
 			args = gitArgs
 			standardOutput = stdout
+			ignoreExitValue = true
 		}
 
 		return stdout.toString().trim()
