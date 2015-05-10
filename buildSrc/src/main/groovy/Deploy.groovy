@@ -27,6 +27,9 @@ public class Deploy {
 		String version = System.getenv("TRAVIS_TAG")
 		if (version != null && version != "") return version.replace("v", "")
 
+		version = git(["tag", "-l", "--contains", "HEAD"])
+		if(version != null && version != "") return version.replace("v", "")
+
 		version = System.getenv("TRAVIS_BRANCH")
 		if (version != null && version != "") return version + "-SNAPSHOT"
 

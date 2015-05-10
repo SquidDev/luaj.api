@@ -14,4 +14,4 @@ deploy:
     repo: SquidDev/luaj.api
     tags: true
 after_success:
-  'test $TRAVIS_PULL_REQUEST == "false" && test $TRAVIS_BRANCH == "master" && ./gradlew uploadArchives'
+  'test $TRAVIS_PULL_REQUEST == "false" && ./gradlew uploadArchives'
