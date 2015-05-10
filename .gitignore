@@ -111,6 +111,6 @@ manifest.mf
 ##############
 # Custom
 ##############
-/target
-/build
+target
+build
 !gradle-wrapper.jar

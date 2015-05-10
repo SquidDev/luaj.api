@@ -4,14 +4,8 @@ apply plugin: 'maven'
 sourceCompatibility = 1.7
 
 group = 'org.squiddev'
-version = { ->
-	def stdout = new ByteArrayOutputStream()
-	exec {
-		commandLine 'git', 'describe', '--always', '--tags'
-		standardOutput = stdout
-	}
-	return stdout.toString().trim()
-}()
+def deploy = new Deploy(project: project)
+version = deploy.toString()
 
 configurations {
 	deployerJars
@@ -47,28 +41,13 @@ artifacts {
 	archives javadocJar
 }
 
-def isTag = {
-	def stdout = new ByteArrayOutputStream()
-	def error = new ByteArrayOutputStream()
-	exec {
-		commandLine 'git', 'describe', '--tag'
-		ignoreExitValue = true
-		errorOutput = error
-		standardOutput = stdout
-	}
-	return error.toString().trim() == "" && stdout.toString().trim != ""
-}
-
 uploadArchives {
 	repositories {
-		if ((project.hasProperty("ftpHost") || System.getenv('FTP_USERNAME') != null) && isTag()) {
+		if (deploy.shouldDeploy()) {
 			mavenDeployer {
 				configuration = configurations.deployerJars
-				repository(url: ftpHost) {
-					authentication(
-							userName: project.hasProperty("ftpHost") ? ftpUser : System.getenv('FTP_USERNAME'),
-							password: project.hasProperty("ftpPass") ? ftpPass : System.getenv('FTP_PASSWORD')
-					)
+				repository(url: deploy.getHost()) {
+					authentication(userName: deploy.getUser(), password: deploy.getPass())
 				}
 
 				pom.project {
