@@ -1,5 +1,6 @@
 package org.squiddev.luaj.api.builder.generator;
 
+import org.luaj.vm2.Varargs;
 import org.objectweb.asm.MethodVisitor;
 import org.squiddev.luaj.api.builder.tree.LuaClass;
 import org.squiddev.luaj.api.builder.tree.LuaMethod;
@@ -114,7 +115,10 @@ public class SplitClassBuilder extends ClassBuilder {
 		String name = names.get(method);
 		int length = method.arguments.length;
 
-		if (method.returnsVarags || (length > 0 && method.arguments[length - 1].isVarargs()) || length > 3) {
+		if (
+			method.returnsVarags || method.method.getReturnType().equals(Varargs.class) ||
+				(length > 0 && method.arguments[length - 1].isVarargs()) || length > 3
+			) {
 			return new SplitMethodBuilder.VarArgBuilder(method, this, name);
 		} else if (length == 0) {
 			return new SplitMethodBuilder.ZeroArgBuilder(method, this, name);

@@ -125,6 +125,17 @@ public class ReturnValues {
 		assertEquals(table, table.get("getSelf").invoke().arg1());
 	}
 
+	@Test
+	public void varReturnNonVarArg() {
+		// A non-varargs function returning a varargs produced some errors
+		loader.makeInstance(new Object() {
+			@LuaFunction
+			public Varargs foo(int arg) {
+				return LuaValue.NONE;
+			}
+		});
+	}
+
 	@LuaAPI
 	public class EmbedClass {
 		@LuaFunction
