@@ -27,6 +27,7 @@ public class JoinedClassBuilder extends ClassBuilder {
 	/**
 	 * Create the main {@link org.squiddev.luaj.api.LuaObjectWrapper#invoke(org.luaj.vm2.Varargs, int)} method
 	 */
+	@Override
 	protected void writeInvoke() {
 		MethodVisitor mv = invokeVisitor = writer.visitMethod(ACC_PUBLIC, "invoke", INVOKE_SIGNATURE, null, null);
 		mv.visitCode();

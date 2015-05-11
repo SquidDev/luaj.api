@@ -4,12 +4,15 @@ import org.squiddev.luaj.api.LuaAPI;
 import org.squiddev.luaj.api.LuaFunction;
 import org.squiddev.luaj.api.builder.BuilderException;
 import org.squiddev.luaj.api.builder.BuilderSettings;
+import org.squiddev.luaj.api.builder.IInjector;
 import org.squiddev.luaj.api.transformer.Transformer;
 import org.squiddev.luaj.api.validation.ILuaValidator;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -53,6 +56,11 @@ public class LuaClass {
 	 */
 	public Class<? extends ILuaValidator> validator;
 
+	/**
+	 * Called when the table is created
+	 */
+	public List<IInjector<LuaClass>> setup = new ArrayList<>();
+
 	public LuaClass(String name, Class<?> klass, BuilderSettings settings) {
 		this.name = name;
 		this.klass = klass;
@@ -75,8 +83,7 @@ public class LuaClass {
 
 		Set<LuaField> fields = this.fields;
 		for (Field field : klass.getFields()) {
-			LuaField f = new LuaField(this, field);
-			if (f.setup != null) fields.add(f);
+			fields.add(new LuaField(this, field));
 		}
 	}
 }

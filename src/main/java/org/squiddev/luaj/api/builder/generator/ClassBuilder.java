@@ -5,6 +5,7 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 import org.squiddev.luaj.api.LuaObject;
 import org.squiddev.luaj.api.builder.BuilderSettings;
+import org.squiddev.luaj.api.builder.IInjector;
 import org.squiddev.luaj.api.builder.tree.LuaClass;
 import org.squiddev.luaj.api.builder.tree.LuaField;
 import org.squiddev.luaj.api.builder.tree.LuaMethod;
@@ -253,14 +254,20 @@ public abstract class ClassBuilder {
 		mv.visitMethodInsn(INVOKESPECIAL, Type.getInternalName(settings.parentClass), "setup", "()V", false);
 
 		for (LuaField field : fields) {
-			field.setup.inject(mv, field);
+			if (field.setup != null) {
+				field.setup.inject(mv, field);
 
-			// Load instance
-			mv.visitVarInsn(ALOAD, 0);
-			mv.visitFieldInsn(GETFIELD, className, INSTANCE, originalWhole);
-			mv.visitTypeInsn(CHECKCAST, originalName);
-			mv.visitInsn(SWAP);
-			mv.visitFieldInsn(PUTFIELD, originalName, field.field.getName(), Type.getDescriptor(field.field.getType()));
+				// Load instance
+				mv.visitVarInsn(ALOAD, 0);
+				mv.visitFieldInsn(GETFIELD, className, INSTANCE, originalWhole);
+				mv.visitTypeInsn(CHECKCAST, originalName);
+				mv.visitInsn(SWAP);
+				mv.visitFieldInsn(PUTFIELD, originalName, field.field.getName(), Type.getDescriptor(field.field.getType()));
+			}
+		}
+
+		for (IInjector<LuaClass> setup : klass.setup) {
+			setup.inject(mv, klass);
 		}
 
 		// And return

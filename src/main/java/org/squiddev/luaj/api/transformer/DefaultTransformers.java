@@ -1,7 +1,13 @@
 package org.squiddev.luaj.api.transformer;
 
+import jdk.internal.org.objectweb.asm.Type;
+import org.luaj.vm2.LuaValue;
+import org.objectweb.asm.MethodVisitor;
 import org.squiddev.luaj.api.Alias;
+import org.squiddev.luaj.api.Field;
 import org.squiddev.luaj.api.LuaAPI;
+import org.squiddev.luaj.api.builder.BuilderException;
+import org.squiddev.luaj.api.builder.IInjector;
 import org.squiddev.luaj.api.builder.tree.LuaArgument;
 import org.squiddev.luaj.api.builder.tree.LuaClass;
 import org.squiddev.luaj.api.builder.tree.LuaField;
@@ -10,6 +16,9 @@ import org.squiddev.luaj.api.setters.Setter;
 import org.squiddev.luaj.api.validation.ValidationClass;
 
 import java.util.Collections;
+
+import static org.objectweb.asm.Opcodes.*;
+import static org.squiddev.luaj.api.builder.BuilderConstants.*;
 
 /**
  * A series of useful transformers
@@ -58,6 +67,53 @@ public class DefaultTransformers extends Transformer {
 			@Override
 			public void transform(LuaField target, Setter annotation) {
 				target.setup = Setter.SetterCache.getInstance(annotation.value());
+			}
+		});
+
+		addFieldTransformer(Field.class, new ITransformer<LuaField, Field>() {
+			@Override
+			public void transform(final LuaField target, final Field field) {
+				String[] names = field.value();
+				if (names == null || (names.length == 1 && names[0].isEmpty())) {
+					names = new String[]{target.field.getName()};
+				}
+
+				final String[] finalNames = names;
+
+				target.klass.setup.add(new IInjector<LuaClass>() {
+					@Override
+					public void inject(MethodVisitor mv, LuaClass klass) {
+						Class<?> type = target.field.getType();
+
+						mv.visitVarInsn(ALOAD, 0);
+						mv.visitFieldInsn(GETFIELD, klass.name, INSTANCE, Type.getDescriptor(klass.klass));
+						mv.visitFieldInsn(GETFIELD, Type.getInternalName(klass.klass), target.field.getName(), Type.getDescriptor(type));
+
+						// If it isn't an array or if it is and the array type isn't a subclass of LuaValue
+						if (!type.isArray() || !LuaValue.class.isAssignableFrom(type.getComponentType())) {
+							// Check if we have a converter
+							IInjector<LuaClass> converter = klass.settings.converter.getToLua(type);
+							if (converter == null) {
+								throw new BuilderException("Cannot convert " + type.getName() + " to LuaValue for ", klass);
+							}
+
+							converter.inject(mv, klass);
+						}
+
+						// If we return an array then try return a {@link LuaTable} or {@link Varargs}
+						if (type.isArray()) LIST_OF.inject(mv);
+
+						mv.visitVarInsn(ASTORE, 1);
+
+						for (String finalName : finalNames) {
+							mv.visitVarInsn(ALOAD, 0);
+							mv.visitFieldInsn(GETFIELD, klass.name, "table", CLASS_LUATABLE);
+							mv.visitLdcInsn(finalName);
+							mv.visitVarInsn(ALOAD, 1);
+							TABLE_SET_STRING.inject(mv);
+						}
+					}
+				});
 			}
 		});
 	}

@@ -2,20 +2,18 @@ package org.squiddev.luaj.api.setters;
 
 import org.luaj.vm2.LuaTable;
 import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Type;
 import org.squiddev.luaj.api.builder.BuilderException;
 import org.squiddev.luaj.api.builder.IInjector;
 import org.squiddev.luaj.api.builder.tree.LuaField;
 
 import static org.objectweb.asm.Opcodes.ALOAD;
 import static org.objectweb.asm.Opcodes.GETFIELD;
+import static org.squiddev.luaj.api.builder.BuilderConstants.CLASS_LUATABLE;
 
 /**
  * Sets the field to be the API's table
  */
 public class TableSetter implements IInjector<LuaField> {
-	protected static final String TYPE_TABLE = Type.getDescriptor(LuaTable.class);
-
 	/**
 	 * Inject bytecode into a visitor
 	 *
@@ -29,6 +27,6 @@ public class TableSetter implements IInjector<LuaField> {
 		}
 
 		visitor.visitVarInsn(ALOAD, 0);
-		visitor.visitFieldInsn(GETFIELD, field.klass.name, "table", TYPE_TABLE);
+		visitor.visitFieldInsn(GETFIELD, field.klass.name, "table", CLASS_LUATABLE);
 	}
 }
