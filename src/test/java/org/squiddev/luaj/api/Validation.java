@@ -7,6 +7,7 @@ import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
 import org.squiddev.luaj.api.builder.APIClassLoader;
+import org.squiddev.luaj.api.validation.ArgErrorValidation;
 import org.squiddev.luaj.api.validation.DefaultLuaValidator;
 import org.squiddev.luaj.api.validation.StrictValidator;
 import org.squiddev.luaj.api.validation.ValidationClass;
@@ -72,6 +73,25 @@ public class Validation {
 	}
 
 	/**
+	 * Tests using {@link ArgErrorValidation}
+	 */
+	@Test
+	public void testArgErrorMode() {
+		LuaValue argError = table.get("argError");
+		LuaValue notNumber = LuaValue.valueOf("notNumber");
+		LuaValue stringNumber = LuaValue.valueOf("2");
+		LuaValue normalNumber = LuaValue.valueOf(2);
+
+		argError.invoke(normalNumber, normalNumber);
+		argError.invoke(stringNumber, stringNumber);
+
+		ExpectException.expect(LuaError.class, "bad argument: number expected, got string",
+			runMethod(argError, notNumber, stringNumber),
+			runMethod(argError, stringNumber, notNumber)
+		);
+	}
+
+	/**
 	 * Tests using {@link StrictValidator} and {@link DefaultLuaValidator}
 	 */
 	@Test
@@ -103,6 +123,11 @@ public class Validation {
 		@LuaFunction
 		@ValidationClass(StrictValidator.class)
 		public void strictMode(double a, int b) {
+		}
+
+		@LuaFunction
+		@ValidationClass(ArgErrorValidation.class)
+		public void argError(double a, int b) {
 		}
 
 		@LuaFunction

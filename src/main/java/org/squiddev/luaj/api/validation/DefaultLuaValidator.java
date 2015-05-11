@@ -20,12 +20,6 @@ import static org.objectweb.asm.Opcodes.INVOKEVIRTUAL;
 public class DefaultLuaValidator implements ILuaValidator {
 	public static final Map<Class<?>, String> CLASS_NAMES;
 
-	/**
-	 * Should validation occur on this argument
-	 *
-	 * @param type The type of the argument to validate
-	 * @return Should the argument be validated?
-	 */
 	@Override
 	public boolean shouldValidate(Class<?> type) {
 		if (type.equals(LuaValue.class) || type.equals(Varargs.class)) return false;
@@ -42,14 +36,8 @@ public class DefaultLuaValidator implements ILuaValidator {
 		throw new BuilderException("Cannot validate " + type.getName());
 	}
 
-	/**
-	 * Injects the validation code for an argument
-	 *
-	 * @param mv   The method visitor to inject to
-	 * @param type The type of the argument
-	 */
 	@Override
-	public void addValidation(MethodVisitor mv, Class<?> type) {
+	public boolean addValidation(MethodVisitor mv, Class<?> type) {
 		if (type.equals(boolean.class)) {
 			mv.visitMethodInsn(INVOKEVIRTUAL, "org/luaj/vm2/LuaValue", "isboolean", "()Z", false);
 		} else if (type.equals(byte.class) || type.equals(int.class) || type.equals(char.class) || type.equals(short.class)) {
@@ -65,14 +53,10 @@ public class DefaultLuaValidator implements ILuaValidator {
 		} else {
 			throw new BuilderException("Cannot validate " + type.getName());
 		}
+
+		return true;
 	}
 
-	/**
-	 * Get the type name of the argument
-	 *
-	 * @param type Argument type
-	 * @return The name of the argument type
-	 */
 	@Override
 	public String getName(Class<?> type) {
 		String name = CLASS_NAMES.get(type);

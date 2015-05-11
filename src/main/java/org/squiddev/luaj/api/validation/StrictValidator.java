@@ -13,14 +13,8 @@ import static org.objectweb.asm.Opcodes.INSTANCEOF;
  * All number types are compared against {@link org.luaj.vm2.LuaNumber}
  */
 public class StrictValidator extends DefaultLuaValidator {
-	/**
-	 * Injects the validation code for an argument
-	 *
-	 * @param mv   The method visitor to inject to
-	 * @param type The type of the argument
-	 */
 	@Override
-	public void addValidation(MethodVisitor mv, Class<?> type) {
+	public boolean addValidation(MethodVisitor mv, Class<?> type) {
 		if (type.equals(boolean.class)) {
 			mv.visitTypeInsn(INSTANCEOF, "org/luaj/vm2/LuaBoolean");
 		} else if (
@@ -35,5 +29,7 @@ public class StrictValidator extends DefaultLuaValidator {
 		} else {
 			throw new BuilderException("Cannot validate " + type.getName());
 		}
+
+		return true;
 	}
 }

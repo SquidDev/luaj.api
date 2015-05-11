@@ -19,8 +19,9 @@ public interface ILuaValidator {
 	 *
 	 * @param mv   The method visitor to inject to
 	 * @param type The type of the argument
+	 * @return If this leaves a boolean on the stack
 	 */
-	void addValidation(MethodVisitor mv, Class<?> type);
+	boolean addValidation(MethodVisitor mv, Class<?> type);
 
 	/**
 	 * Get the type name of the argument

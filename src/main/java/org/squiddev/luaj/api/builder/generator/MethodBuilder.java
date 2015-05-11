@@ -91,8 +91,7 @@ public abstract class MethodBuilder {
 		}
 
 		int index = 1;
-		while (iterator.hasNext()) {
-			LuaArgument arg = iterator.next();
+		for (LuaArgument arg : method) {
 			Class<?> type = arg.parameter.getType();
 			ILuaValidator validator = arg.getValidator();
 
@@ -101,14 +100,9 @@ public abstract class MethodBuilder {
 
 			if (validator.shouldValidate(type)) {
 				loadArgument(index);
-				validator.addValidation(mv, type);
-
-				if (iterator.hasValidateNext()) {
+				if (validator.addValidation(mv, type)) {
 					// If (condition) is false (== 0) then go to exception, else continue
 					mv.visitJumpInsn(IFEQ, doException);
-				} else {
-					// If (condition) is true (== 1) then no exception
-					mv.visitJumpInsn(IFNE, noException);
 				}
 			}
 
@@ -116,6 +110,8 @@ public abstract class MethodBuilder {
 		}
 
 		if (needsValidation) {
+			mv.visitJumpInsn(GOTO, noException);
+
 			// Do exception
 			mv.visitLabel(doException);
 			mv.visitFrame(F_SAME, 0, null, 0, null);
