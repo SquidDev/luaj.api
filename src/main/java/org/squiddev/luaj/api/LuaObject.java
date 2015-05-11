@@ -28,6 +28,13 @@ public abstract class LuaObject {
 	public abstract String[][] getMethodNames();
 
 	/**
+	 * Get the base instance
+	 *
+	 * @return The instance this object uses
+	 */
+	protected abstract Object getInstance();
+
+	/**
 	 * Create the API's function table
 	 *
 	 * @return The created table

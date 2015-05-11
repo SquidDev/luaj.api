@@ -1,8 +1,8 @@
 package org.squiddev.luaj.api.transformer;
 
-import jdk.internal.org.objectweb.asm.Type;
 import org.luaj.vm2.LuaValue;
 import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Type;
 import org.squiddev.luaj.api.Alias;
 import org.squiddev.luaj.api.Field;
 import org.squiddev.luaj.api.LuaAPI;

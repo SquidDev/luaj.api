@@ -236,6 +236,18 @@ public abstract class ClassBuilder {
 			mv.visitMaxs(1, 0);
 			mv.visitEnd();
 		}
+
+		{
+			MethodVisitor mv = writer.visitMethod(ACC_PUBLIC, "getInstance", "()Ljava/lang/Object;", null, null);
+			mv.visitCode();
+
+			mv.visitVarInsn(ALOAD, 0);
+			mv.visitFieldInsn(GETFIELD, className, "instance", originalWhole);
+			mv.visitInsn(ARETURN);
+
+			mv.visitMaxs(1, 0);
+			mv.visitEnd();
+		}
 	}
 
 	/**
