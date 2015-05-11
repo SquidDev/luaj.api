@@ -8,6 +8,7 @@ import org.objectweb.asm.Type;
 import org.squiddev.luaj.api.builder.BuilderException;
 import org.squiddev.luaj.api.builder.IInjector;
 import org.squiddev.luaj.api.builder.tree.LuaArgument;
+import org.squiddev.luaj.api.builder.tree.LuaClass;
 import org.squiddev.luaj.api.builder.tree.LuaMethod;
 import org.squiddev.luaj.api.validation.ILuaValidator;
 
@@ -151,9 +152,9 @@ public abstract class MethodBuilder {
 			} else {
 				loadArgument(argCounter);
 
-				IInjector<LuaMethod> type = builder.settings.converter.getFromLua(argType);
+				IInjector<LuaClass> type = builder.settings.converter.getFromLua(argType);
 				if (type == null) throw new BuilderException("Cannot convert LuaValue to " + argType, method);
-				type.inject(mv, method);
+				type.inject(mv, method.klass);
 			}
 
 			++argCounter;
@@ -174,12 +175,12 @@ public abstract class MethodBuilder {
 			// If it isn't an array or if it is and the array type isn't a subclass of LuaValue
 			if (!returns.isArray() || !LuaValue.class.isAssignableFrom(returns.getComponentType())) {
 				// Check if we have a converter
-				IInjector<LuaMethod> type = builder.settings.converter.getToLua(returns);
+				IInjector<LuaClass> type = builder.settings.converter.getToLua(returns);
 				if (type == null) {
 					throw new BuilderException("Cannot convert " + returns.getName() + " to LuaValue for ", method);
 				}
 
-				type.inject(mv, method);
+				type.inject(mv, method.klass);
 			}
 
 			// If we return an array then try return a {@link LuaTable} or {@link Varargs}

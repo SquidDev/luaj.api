@@ -9,7 +9,7 @@ import org.objectweb.asm.Type;
 import org.squiddev.luaj.api.LuaAPI;
 import org.squiddev.luaj.api.LuaObject;
 import org.squiddev.luaj.api.builder.IInjector;
-import org.squiddev.luaj.api.builder.tree.LuaMethod;
+import org.squiddev.luaj.api.builder.tree.LuaClass;
 import org.squiddev.luaj.api.utils.TinyMethod;
 
 import java.util.HashMap;
@@ -24,21 +24,21 @@ import static org.squiddev.luaj.api.builder.BuilderConstants.*;
 public class Converter {
 	private static Converter instance;
 
-	protected static IInjector<LuaMethod> VOID = new IInjector<LuaMethod>() {
+	protected static IInjector<LuaClass> VOID = new IInjector<LuaClass>() {
 		@Override
-		public void inject(MethodVisitor mv, LuaMethod object) {
+		public void inject(MethodVisitor mv, LuaClass object) {
 		}
 	};
 
 	/**
 	 * Methods that convert Java objects to {@link org.luaj.vm2.LuaValue}
 	 */
-	protected final Map<Class<?>, IInjector<LuaMethod>> toLua = new HashMap<>();
+	protected final Map<Class<?>, IInjector<LuaClass>> toLua = new HashMap<>();
 
 	/**
 	 * Methods that convert {@link org.luaj.vm2.LuaValue} to Java objects
 	 */
-	protected final Map<Class<?>, IInjector<LuaMethod>> fromLua = new HashMap<>();
+	protected final Map<Class<?>, IInjector<LuaClass>> fromLua = new HashMap<>();
 
 	public Converter() {
 		initFromLua();
@@ -106,10 +106,10 @@ public class Converter {
 	 * @param method The method to wrap
 	 * @return A wrapped TinyMethod
 	 */
-	protected IInjector<LuaMethod> wrapMethod(final TinyMethod method) {
-		return new IInjector<LuaMethod>() {
+	protected IInjector<LuaClass> wrapMethod(final TinyMethod method) {
+		return new IInjector<LuaClass>() {
 			@Override
-			public void inject(MethodVisitor mv, LuaMethod object) {
+			public void inject(MethodVisitor mv, LuaClass object) {
 				method.inject(mv);
 			}
 		};
@@ -121,7 +121,7 @@ public class Converter {
 	 * @param type      The Java type to convert
 	 * @param converter The converter to run
 	 */
-	public void toLua(Class<?> type, IInjector<LuaMethod> converter) {
+	public void toLua(Class<?> type, IInjector<LuaClass> converter) {
 		toLua.put(type, converter);
 	}
 
@@ -141,7 +141,7 @@ public class Converter {
 	 * @param type      The Java type to convert to
 	 * @param converter The converter to run
 	 */
-	public void fromLua(Class<?> type, IInjector<LuaMethod> converter) {
+	public void fromLua(Class<?> type, IInjector<LuaClass> converter) {
 		fromLua.put(type, converter);
 	}
 
@@ -175,12 +175,12 @@ public class Converter {
 	 * @return The converter to use
 	 * @see #toLua
 	 */
-	public IInjector<LuaMethod> getToLua(final Class<?> klass) {
+	public IInjector<LuaClass> getToLua(final Class<?> klass) {
 		if (klass.isAnnotationPresent(LuaAPI.class)) {
-			return new IInjector<LuaMethod>() {
+			return new IInjector<LuaClass>() {
 				@Override
-				public void inject(MethodVisitor mv, LuaMethod method) {
-					mv.visitFieldInsn(GETSTATIC, method.klass.name, LOADER, CLASS_LOADER);
+				public void inject(MethodVisitor mv, LuaClass klass) {
+					mv.visitFieldInsn(GETSTATIC, klass.name, LOADER, CLASS_LOADER);
 					mv.visitInsn(SWAP);
 					API_MAKE_INSTANCE.inject(mv);
 					API_GET_TABLE.inject(mv);
@@ -202,7 +202,7 @@ public class Converter {
 	 * @return The converter to use
 	 * @see #fromLua
 	 */
-	public IInjector<LuaMethod> getFromLua(final Class<?> klass) {
+	public IInjector<LuaClass> getFromLua(final Class<?> klass) {
 		// Allows having just LuaValue or Object
 		// This allows for if you just want to package the annotations and nothing else when supplying an API
 		if (klass.equals(Object.class) || klass.isInstance(LuaValue.class)) {
@@ -210,9 +210,9 @@ public class Converter {
 		}
 
 		if (LuaValue.class.isAssignableFrom(klass)) {
-			return new IInjector<LuaMethod>() {
+			return new IInjector<LuaClass>() {
 				@Override
-				public void inject(MethodVisitor mv, LuaMethod method) {
+				public void inject(MethodVisitor mv, LuaClass object) {
 					mv.visitTypeInsn(CHECKCAST, Type.getInternalName(klass));
 				}
 			};

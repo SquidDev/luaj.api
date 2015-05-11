@@ -1,22 +1,14 @@
 package org.squiddev.luaj.api.builder.tree;
 
 import org.luaj.vm2.Varargs;
-import org.squiddev.luaj.api.builder.BuilderException;
 import org.squiddev.luaj.api.builder.Parameter;
 import org.squiddev.luaj.api.validation.ILuaValidator;
-
-import java.util.HashMap;
-import java.util.Map;
+import org.squiddev.luaj.api.validation.ValidatorCache;
 
 /**
  * Stores one argument of a Lua method
  */
 public class LuaArgument {
-	/**
-	 * Cache of validator instances
-	 */
-	private static final Map<Class<? extends ILuaValidator>, ILuaValidator> VALIDATORS = new HashMap<>();
-
 	/**
 	 * The parent method for this argument
 	 */
@@ -52,19 +44,7 @@ public class LuaArgument {
 	}
 
 	public ILuaValidator getValidator() {
-		ILuaValidator val = VALIDATORS.get(validator);
-
-		if (val == null) {
-			try {
-				val = validator.newInstance();
-			} catch (ReflectiveOperationException e) {
-				throw new BuilderException("Cannot create new instance of " + validator.getName(), this, e);
-			}
-
-			VALIDATORS.put(validator, val);
-		}
-
-		return val;
+		return ValidatorCache.getValidator(validator);
 	}
 
 	public boolean isVarargs() {
